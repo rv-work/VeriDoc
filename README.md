@@ -37,7 +37,7 @@ Traditional certificate verification is slow, manual, and prone to forgery.
 ### 👤 Student Dashboard
 
 - Students connect their wallet and see all certificates issued to them.
-- **100% decentralized, no login or email required.**
+- **100% decentralized.**
 
 ### 🔗 Share & Verify
 
