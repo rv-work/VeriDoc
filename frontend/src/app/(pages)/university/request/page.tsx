@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, {useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { 
@@ -54,12 +54,17 @@ const Request = () => {
   const [submitted, setSubmitted] = useState(false);
 
 
+
+
     const checkStatus = async () => {
       const res = await axios.post("http://localhost:5000/api/university/status" , {
         walletAddress : checkEmail } , {withCredentials : true})
-        console.log(res.data)
-      if(res.data) {
+        console.log(res.data.success)
+        
+      if(res.data.success) {
          setIdDone(res.data.status)
+      } else {
+        toast.error(res.data.msg)
       }
     }
     
@@ -81,6 +86,13 @@ const Request = () => {
       const res = await axios.post('http://localhost:5000/api/university/request', form,
         {withCredentials : true}
       );
+
+       if(res.data.success === false ){
+        toast.error(res.data.msg);
+        return
+      }
+
+
       toast.success('Request submitted successfully! We will review your application.');
       setSubmitted(true);
 

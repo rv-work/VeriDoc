@@ -30,7 +30,7 @@ export const Signup = async (req, res) => {
       },
     });
 
-    const token = jwt.sign({ id: user.id, Iam: user.role }, 'secretkey', {
+    const token = jwt.sign({ id: user.id, Iam: user.role  , isPremium : user.subscription !== 'free' , balance : 0}, 'secretkey', {
       expiresIn: '7d',
     });
 
@@ -41,7 +41,7 @@ export const Signup = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(201).json({ success: true, msg: 'User registered successfully', userRole : user.role });
+    res.status(201).json({ success: true, msg: 'User registered successfully', userRole : user.role , isPremium : user.subscription !== 'free' , balance : user.balance  });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -62,7 +62,7 @@ export const Login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ msg: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user.id, Iam: user.role }, 'secretkey', {
+    const token = jwt.sign({ id: user.id, Iam: user.role , isPremium : (user.subscription !== 'free') , balance : user.balance }, 'secretkey', {
       expiresIn: '7d',
     });
 
@@ -73,7 +73,12 @@ export const Login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ success: true, msg: 'Login successful', userRole : user.role });
+
+    console.log("user : " , user)
+
+
+
+    res.status(200).json({ success: true, msg: 'Login successful', userRole : user.role , isPremium : (user.subscription !== 'free') , balance : user.balance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -85,7 +90,14 @@ export const CheckAuth = async (req, res) => {
     if (!token) return res.status(401).json({ msg: 'No token. Auth denied' });
 
     const decoded = jwt.verify(token, 'secretkey');
-    res.json({ success: true  , userRole : decoded.Iam });
+
+    const user = await prisma.user.findUnique({
+      where : {id : decoded.id}
+    })
+
+
+    res.json({ success: true  , userRole : user.role , isPremium : (user.subscription !== 'free') , balance : user.balance });
+
 
   } catch (err) {
     res.status(401).json({ msg: 'Token is not valid' });

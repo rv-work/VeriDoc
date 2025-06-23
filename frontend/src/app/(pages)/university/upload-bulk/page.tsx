@@ -15,10 +15,11 @@ import {
   Eye,
   Users
 } from 'lucide-react';
-import { useWeb3 } from '@/app/context/Web3Context';
 import { UploadToIPFS } from '@/app/utils/uploadToIPFS';
 import toast from 'react-hot-toast';
 import JSZip from 'jszip';
+import { useWeb3 } from '@/app/context/Web3Context';
+import { useAuth } from '@/app/context/AuthContext';
 
 interface CertificateData {
   studentAddress: string;
@@ -57,16 +58,15 @@ const BulkUploadCertificate: React.FC = () => {
   const [errors, setErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { contractInstance, address } = useWeb3();
+  const { contractInstance, address } = useWeb3()
+  const { isPremium } = useAuth()
 
-  // Generate certificate ID
   const generateCertificateId = (): string => {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 8);
     return `CERT-${new Date().getFullYear()}-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
   };
 
-  // Handle CSV file upload
   const handleCsvUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -76,7 +76,7 @@ const BulkUploadCertificate: React.FC = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
       toast.error('File size should be less than 5MB');
       return;
     }
@@ -85,7 +85,6 @@ const BulkUploadCertificate: React.FC = () => {
     parseCsvFile(file);
   };
 
-  // Parse CSV file
   const parseCsvFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -157,7 +156,6 @@ const BulkUploadCertificate: React.FC = () => {
           }
         });
 
-        // Validate required fields
         if (!cert.studentAddress || !cert.studentName || !cert.course || !cert.rollNo || !cert.issueDate) {
           newErrors.push(`Row ${i + 1}: Missing required data`);
           continue;
@@ -168,7 +166,6 @@ const BulkUploadCertificate: React.FC = () => {
 
       let finalCertificates = newCertificates;
 
-      // If CSV+ZIP method and we have extracted files, match them
       if (csvUploadMethod === 'csv-zip' && Object.keys(extractedFiles).length > 0) {
         finalCertificates = matchFilesWithCsv(newCertificates, extractedFiles);
       }
@@ -207,7 +204,6 @@ const BulkUploadCertificate: React.FC = () => {
     }
   };
 
-  // Handle ZIP file upload
   const handleZipUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -217,7 +213,7 @@ const BulkUploadCertificate: React.FC = () => {
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+    if (file.size > 50 * 1024 * 1024) {
       toast.error('ZIP file size should be less than 50MB');
       return;
     }
@@ -332,6 +328,11 @@ const BulkUploadCertificate: React.FC = () => {
       return;
     }
 
+    if (!isPremium) {
+      toast.error("Upgrade To Premium")
+      return;
+    }
+
     if (!contractInstance) {
       toast.error('Please connect your wallet first');
       return;
@@ -354,23 +355,20 @@ const BulkUploadCertificate: React.FC = () => {
         currentStep: 'Submitting to blockchain...'
       }));
 
-      const studentAddresses = updatedCertificates.map(cert => cert.studentAddress);
-      const certificateIds = updatedCertificates.map(cert => cert.certificateId);
-      const studentNames = updatedCertificates.map(cert => cert.studentName);
-      const courses = updatedCertificates.map(cert => cert.course);
-      const rollNos = updatedCertificates.map(cert => cert.rollNo);
-      const issueDates = updatedCertificates.map(cert => cert.issueDate);
-      const ipfsHashes = updatedCertificates.map(cert => cert.ipfsHash);
 
-      const tx = await contractInstance.issueDegreesBulk(
-        studentAddresses,
-        certificateIds,
-        studentNames,
-        courses,
-        rollNos,
-        issueDates,
-        ipfsHashes
-      );
+
+      const inputs = updatedCertificates.map(cert => ({
+        student: cert.studentAddress,
+        certificateId: cert.certificateId,
+        studentName: cert.studentName,
+        course: cert.course,
+        rollNo: cert.rollNo,
+        issueDate: cert.issueDate,
+        ipfsHash: cert.ipfsHash
+      }));
+
+      const tx = await contractInstance.issueDegreesBulk(inputs);
+
 
       setProgress(prev => ({
         ...prev,
@@ -848,8 +846,8 @@ const BulkUploadCertificate: React.FC = () => {
                       const newCertificates = files.map(file => {
                         const today = new Date().toISOString().split('T')[0];
                         const [studentAddress, studentName, course, rollNoWithExt] = file.name.split('-');
-                        const rollNo = rollNoWithExt.split('.')[0]; 
-                      
+                        const rollNo = rollNoWithExt.split('.')[0];
+
                         return {
                           studentAddress: studentAddress || '',
                           studentName: studentName || '',
@@ -972,7 +970,6 @@ const BulkUploadCertificate: React.FC = () => {
                             <input
                               type="file"
                               accept=".png,.jpg,.jpeg,.pdf"
-                              value={cert.file}
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
                                 if (file) handleFileUpload(index, file);

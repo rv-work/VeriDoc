@@ -18,7 +18,7 @@ export default function RootLayout({
         <Toaster position="top-right" reverseOrder={false} />
         <Web3Provider>
           <AuthProvider>
-            <Navbar />
+            <Navbar  />
             {children}
             <Footer />
         </AuthProvider>

@@ -1,82 +1,3 @@
-// generator client {
-//   provider = "prisma-client-js"
-// }
-
-// datasource db {
-//   provider = "postgresql"
-//   url      = env("DATABASE_URL")
-// }
-
-// model User {
-//   id              String        @id @default(cuid())
-//   name            String
-//   email           String        @unique
-//   password        String
-//   dob             DateTime
-//   role            UserRole
-//   gender          Gender
-//   walletAddress   String        @unique
-
-// }
-
-
-
-// model University {
-//   id                 String         @id @default(cuid())
-//   universityName     String
-//   type               UniversityType
-//   website            String
-//   registrationNumber String
-//   contactPerson      String
-//   designation        String
-//   phone              String
-//   email              String
-//   walletAddress      String         @unique
-//   isApproved         Boolean        @default(false)
-// }
-
-// enum UserRole {
-//   student
-//   institute
-//   admin
-//   other
-// }
-
-// enum Gender {
-//   male
-//   female
-// }
-
-
-
-// enum UniversityType {
-//   government
-//   private
-//   deemed
-//   autonomous
-//   central
-//   state
-//   other
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -87,18 +8,19 @@ datasource db {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  name            String
-  email           String        @unique
-  password        String
-  dob             DateTime
-  role            UserRole
-  gender          Gender
-  walletAddress   String        @unique
-  subscription    Plan         @default(free)
+  id            String       @id @default(cuid())
+  name          String
+  email         String       @unique
+  password      String
+  dob           DateTime
+  role          UserRole
+  gender        Gender
+  walletAddress String       @unique
+  subscription  Plan         @default(free)
+  expiryDate    DateTime?
+  institutes    University[]
+  balance       Int          @default(0)
 }
-
-
 
 model University {
   id                 String         @id @default(cuid())
@@ -112,6 +34,8 @@ model University {
   email              String
   walletAddress      String         @unique
   isApproved         Boolean        @default(false)
+  addedBy            User           @relation(fields: [addedById], references: [id])
+  addedById          String
 }
 
 enum UserRole {
@@ -142,4 +66,3 @@ enum UniversityType {
   state
   other
 }
-

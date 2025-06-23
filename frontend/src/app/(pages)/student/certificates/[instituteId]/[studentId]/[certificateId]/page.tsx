@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from 'next/navigation';
 import {
   Shield,
   User,
@@ -22,6 +23,9 @@ import { useWeb3 } from "@/app/context/Web3Context";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import UniversityDisplay from "@/app/components/UniversityDetails";
+import { loadStripe } from "@stripe/stripe-js";
+import { useAuth } from "@/app/context/AuthContext";
+import toast from "react-hot-toast";
 
 interface CertificateData {
   studentName: string;
@@ -37,6 +41,10 @@ interface CertificateData {
 const CertificateVerification: React.FC = () => {
   const params = useParams();
   const { contractInstance } = useWeb3();
+
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('session_id');
+
   const universityAddress = params?.instituteId as string | undefined;
   const studentAddress = params?.studentId as string | undefined;
   const certificateId = params?.certificateId as string | undefined;
@@ -45,19 +53,102 @@ const CertificateVerification: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string>("");
-   const [issuedBy , setIssuedBy] = useState(null)
-     const [hash , setHash] = useState("")
+  const [issuedBy, setIssuedBy] = useState(null)
+  const [hash, setHash] = useState("")
 
 
-   const handeView = async (add : string , hash : string) => {
-     const res = await axios.post("http://localhost:5000/api/student/view" , 
-      { add } , {withCredentials : true})
+  const { isPremium } = useAuth()
+
+
+  const handeView = async (add: string, hash: string) => {
+    const res = await axios.post("http://localhost:5000/api/student/view",
+      { add }, { withCredentials: true })
     setIssuedBy(res.data.university)
     setHash(hash)
     window.scrollTo({ top: 1200, behavior: 'smooth' });
   }
 
-useEffect(() => {
+
+
+
+  useEffect(() => {
+    const checkPremiumAccess = async () => {
+      if (!isPremium) {
+        await handleStripePayment("Pay-For-Verification", 25);
+      }
+    };
+
+    checkPremiumAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleStripePayment = async (planName: string, amount: number): Promise<void> => {
+    const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ");
+
+    const response = await fetch('http://localhost:5000/api/payment/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        planName,
+        amount,
+        successUrl: `http://localhost:3000/studnet/certificates/${universityAddress}/${studentAddress}/${certificateId}`,
+        cancelUrl: "http://localhost:3000/payment/cancel",
+      }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create checkout session');
+    }
+
+    const session = await response.json();
+
+
+    const result = await stripe?.redirectToCheckout({
+      sessionId: session.id,
+    });
+
+    if (result?.error) {
+      console.error(result.error.message);
+    }
+  };
+
+  useEffect(() => {
+
+    const confirmPayment = async () => {
+      if (!sessionId) return;
+
+      const res = await fetch('http://localhost:5000/api/payment/confirm-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId, planName: "Pay-For-Verification", purpose: "verification" }),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+
+      if (data.success) {
+        console.log('✅ Payment confirmed');
+        toast.success('Payment successful! You can now verify certificates.');
+      } else {
+        console.error('❌ Payment confirmation failed:', data.error);
+      }
+    };
+
+    confirmPayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+
+
+
+  useEffect(() => {
     const fetchCertificate = async () => {
       if (!contractInstance || !universityAddress || !studentAddress || !certificateId) return;
 
@@ -91,6 +182,8 @@ useEffect(() => {
 
     fetchCertificate();
   }, [contractInstance, universityAddress, studentAddress, certificateId]);
+
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -110,10 +203,13 @@ useEffect(() => {
   };
 
   const openIpfsLink = (ipfsHash: string) => {
-    console.log("hash : " , ipfsHash)
-      window.open(`https://ipfs.io/ipfs/${ipfsHash.replace("ipfs://", "")}`, "_blank", "noopener,noreferrer");
-   
+    console.log("hash : ", ipfsHash)
+    window.open(`https://ipfs.io/ipfs/${ipfsHash.replace("ipfs://", "")}`, "_blank", "noopener,noreferrer");
+
   };
+
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 py-8 px-4">
@@ -175,11 +271,10 @@ useEffect(() => {
             <>
               {/* Validity Status Banner */}
               <section
-                className={`p-6 ${
-                  certificateData.isValid
+                className={`p-6 ${certificateData.isValid
                     ? "bg-gradient-to-r from-green-500 to-emerald-600"
                     : "bg-gradient-to-r from-red-500 to-pink-600"
-                } text-white`}
+                  } text-white`}
               >
                 <div className="flex items-center justify-center space-x-3">
                   {certificateData.isValid ? (
@@ -276,11 +371,10 @@ useEffect(() => {
                             aria-label="Copy issuer address"
                           >
                             <Copy
-                              className={`w-4 h-4 ${
-                                copied === certificateData.issuedBy
+                              className={`w-4 h-4 ${copied === certificateData.issuedBy
                                   ? "text-green-500"
                                   : "text-gray-400"
-                              } cursor-pointer hover:text-gray-600 transition-colors`}
+                                } cursor-pointer hover:text-gray-600 transition-colors`}
                             />
                           </button>
                         </div>
@@ -310,11 +404,10 @@ useEffect(() => {
                           aria-label="Copy certificate ID"
                         >
                           <Copy
-                            className={`w-4 h-4 ${
-                              copied === certificateId
+                            className={`w-4 h-4 ${copied === certificateId
                                 ? "text-green-500"
                                 : "text-gray-400"
-                            } cursor-pointer hover:text-gray-600 transition-colors`}
+                              } cursor-pointer hover:text-gray-600 transition-colors`}
                           />
                         </button>
                       </div>
@@ -344,11 +437,10 @@ useEffect(() => {
                         aria-label="Copy IPFS hash"
                       >
                         <Copy
-                          className={`w-4 h-4 ${
-                            copied === certificateData.ipfsHash
+                          className={`w-4 h-4 ${copied === certificateData.ipfsHash
                               ? "text-green-500"
                               : "text-gray-400"
-                          } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
+                            } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
                         />
                       </button>
                     </div>
@@ -365,11 +457,10 @@ useEffect(() => {
                         aria-label="Copy university address"
                       >
                         <Copy
-                          className={`w-4 h-4 ${
-                            copied === universityAddress
+                          className={`w-4 h-4 ${copied === universityAddress
                               ? "text-green-500"
                               : "text-gray-400"
-                          } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
+                            } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
                         />
                       </button>
                       <button
@@ -391,11 +482,10 @@ useEffect(() => {
                         aria-label="Copy student address"
                       >
                         <Copy
-                          className={`w-4 h-4 ${
-                            copied === studentAddress
+                          className={`w-4 h-4 ${copied === studentAddress
                               ? "text-green-500"
                               : "text-gray-400"
-                          } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
+                            } cursor-pointer hover:text-gray-600 transition-colors flex-shrink-0`}
                         />
                       </button>
                     </div>
@@ -478,7 +568,7 @@ useEffect(() => {
           <p className="mt-2">© 2025 Certificate Verification System. All rights reserved.</p>
         </footer>
       </div>
-        {issuedBy && <UniversityDisplay issuedBy={issuedBy} hash ={hash} />}
+      {issuedBy && <UniversityDisplay issuedBy={issuedBy} hash={hash} />}
     </div>
   );
 };

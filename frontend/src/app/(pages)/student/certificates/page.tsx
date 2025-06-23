@@ -50,7 +50,7 @@ const StudentDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [issuedBy , setIssuedBy] = useState(null)
   const [hash , setHash] = useState("")
-   const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     valid: 0,

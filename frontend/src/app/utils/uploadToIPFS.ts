@@ -21,8 +21,8 @@ export const UploadToIPFS = async (file: File): Promise<string> => {
   const res = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
     method: 'POST',
     headers: {
-      pinata_api_key: 'fc89d72c130bf8be1d2a',
-      pinata_secret_api_key: 'bcefd45783d33eddc4f9c4ac8cdeccbf0aa80b0f5b2faf0a2616e11b095c3195',
+      'pinata_api_key': process.env.PINATA_API_KEY ?? '',
+      'pinata_secret_api_key': process.env.PINATA_SECRET_API_KEY ?? '',
     },
     body: formData,
   });

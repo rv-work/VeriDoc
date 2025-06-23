@@ -6,6 +6,10 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 interface AuthContextType {
   isLoggedIn: boolean;
   setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
+  isPremium: boolean;
+  setIsPremium: React.Dispatch<React.SetStateAction<boolean>>;
+  balance: number;
+  setBalance: React.Dispatch<React.SetStateAction<number>>;
   userRole: string | null;
   setUserRole: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -19,6 +23,8 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     const fetchLoggedInStatus = async () => {
@@ -32,6 +38,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const data = await response.json();
           setIsLoggedIn(data.success);
           setUserRole(data.userRole);
+          setIsPremium(data.isPremium);
+          setBalance(data.balance)
+          console.log("balance : ", data.balance)
           console.log("role")
         } else {
           setIsLoggedIn(false);
@@ -45,7 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, userRole, setUserRole }}>
+    <AuthContext.Provider value={{ balance, setBalance, isLoggedIn, isPremium, setIsPremium, setIsLoggedIn, userRole, setUserRole }}>
       {children}
     </AuthContext.Provider>
   );

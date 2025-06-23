@@ -12,7 +12,7 @@ declare global {
   }
 }
 
-const contractAddress = "0x332Fb35767182F8ac9F9C1405db626105F6694E0";
+const contractAddress = "0xef11D1c2aA48826D4c41e54ab82D1Ff5Ad8A64Ca";
 
 interface Web3ContextType {
   contractInstance: ethers.Contract | null;
@@ -28,6 +28,7 @@ interface Web3ProviderProps {
 }
 
 export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
+
   const [contractInstance, setContractInstance] = useState<ethers.Contract | null>(null);
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [address, setAddress] = useState<string | null>(null);
@@ -56,10 +57,10 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
           setSigner(signer);
           setAddress(address);
           toast.success("Connected Successfully")
-          const contract = new ethers.Contract(contractAddress, contractABI.abi, signer);
+          const contract = new ethers.Contract(contractAddress, contractABI, signer);
           setContractInstance(contract);
-          console.log("signer : " , signer)
-          console.log("address : " , address)
+          console.log("signer : ", signer)
+          console.log("address : ", address)
 
         } else {
           console.error("Login Failed", data);

@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, ChangeEvent, JSX } from 'react';
-import { 
-  Upload, 
-  FileText, 
-  User, 
-  GraduationCap, 
-  Hash, 
-  Calendar, 
-  MapPin, 
+import React, { useState, ChangeEvent, JSX, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import {
+  Upload,
+  FileText,
+  User,
+  GraduationCap,
+  Hash,
+  Calendar,
+  MapPin,
   Wallet,
   CheckCircle,
   AlertCircle,
@@ -17,6 +18,9 @@ import {
 import { useWeb3 } from '@/app/context/Web3Context';
 import { UploadToIPFS } from '@/app/utils/uploadToIPFS';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/app/context/AuthContext';
+import { loadStripe } from '@stripe/stripe-js';
+import { Suspense } from 'react';
 
 interface FormData {
   studentAddress: string;
@@ -36,7 +40,8 @@ interface InputField {
   type: string;
 }
 
-const UploadCertificate: React.FC = () => {
+const UploadPageContent: React.FC = () => {
+
   const [formData, setFormData] = useState<FormData>({
     studentAddress: '',
     certificateId: '',
@@ -47,6 +52,24 @@ const UploadCertificate: React.FC = () => {
     ipfsHash: '',
   });
 
+  useEffect(() => {
+    const storedItem = localStorage.getItem("certificateData");
+
+    if (storedItem) {
+      const parsed = JSON.parse(storedItem);
+      setFormData(parsed);
+    }
+  }, []);
+
+
+
+
+
+  const { isPremium, balance } = useAuth()
+
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get('session_id');
+
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [file, setFile] = useState<File | null>(null);
@@ -54,12 +77,14 @@ const UploadCertificate: React.FC = () => {
 
 
 
-  const {contractInstance , address} = useWeb3()
+
+
+  const { contractInstance, address } = useWeb3()
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
+
     if (errors[name as keyof FormData]) {
       setErrors({ ...errors, [name]: '' });
     }
@@ -67,14 +92,14 @@ const UploadCertificate: React.FC = () => {
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
-    
+
     if (!formData.studentAddress) newErrors.studentAddress = 'Student wallet address is required';
     if (!formData.certificateId) newErrors.certificateId = 'Certificate ID is required';
     if (!formData.studentName) newErrors.studentName = 'Student name is required';
     if (!formData.course) newErrors.course = 'Course name is required';
     if (!formData.rollNo) newErrors.rollNo = 'Roll number is required';
     if (!formData.issueDate) newErrors.issueDate = 'Issue date is required';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -83,30 +108,127 @@ const UploadCertificate: React.FC = () => {
 
 
   const generateCertificateId = (): string => {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `CERT-${new Date().getFullYear()}-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 8);
+    return `CERT-${new Date().getFullYear()}-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
   };
 
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
 
-    
+
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       if (selectedFile.size > 10 * 1024 * 1024) {
         alert('File size should be less than 10MB');
         return;
       }
-      
+
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
       if (!allowedTypes.includes(selectedFile.type)) {
         alert('Only PNG, JPG, and PDF files are allowed');
         return;
       }
-      
+
       setFile(selectedFile);
     }
+  };
+
+
+  const handleStripePayment = async (planName: string, amount: number): Promise<void> => {
+    const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ");
+
+    console.log("inside")
+
+    const response = await fetch('http://localhost:5000/api/payment/create-order', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        planName,
+        amount,
+        successUrl: `http://localhost:3000/university/upload`,
+        cancelUrl: "http://localhost:3000/payment/cancel",
+      }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create checkout session');
+    }
+
+    const session = await response.json();
+
+
+    const result = await stripe?.redirectToCheckout({
+      sessionId: session.id,
+    });
+
+    if (result?.error) {
+      console.error(result.error.message);
+    }
+  };
+
+  useEffect(() => {
+
+    const confirmPayment = async () => {
+      if (!sessionId) return;
+
+      const res = await fetch('http://localhost:5000/api/payment/confirm-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId, planName: "Pay-For-upload", purpose: "upload" }),
+        credentials: 'include',
+      });
+
+      const data = await res.json();
+
+
+      if (data.success) {
+        console.log('✅ Payment confirmed');
+        toast.success('Payment successful! You can now upload certificate.');
+      } else {
+        console.error('❌ Payment confirmation failed:', data.error);
+      }
+    };
+
+    confirmPayment();
+  }, [sessionId]);
+
+
+  const makePayment = async () => {
+    const res = await fetch('http://localhost:5000/api/payment/use-money', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      console.log('✅ Payment Deducted');
+      toast.success('Payment successful! Amount Deducted from your balance.');
+    } else {
+      console.error('❌ Payment confirmation failed:', data.error);
+    }
+  };
+
+
+
+
+
+  const checkPremium = async (): Promise<boolean> => {
+    console.log("premium L ", isPremium, " balance : ", balance)
+    if (!isPremium && balance < 250) {
+      await handleStripePayment("Pay-For-Upload", 25);
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async () => {
@@ -115,12 +237,17 @@ const UploadCertificate: React.FC = () => {
     }
 
     const { studentAddress, certificateId, studentName, course, rollNo, issueDate, ipfsHash } = formData;
+    localStorage.setItem("certificateData", JSON.stringify(formData));
+
 
     try {
+      const isPaid = await checkPremium();
+      if (!isPaid) return;
+
       setLoading(true);
-      
+
       let finalIpfsHash = ipfsHash;
-      
+
       if (file) {
         try {
           setUploadingToPinata(true)
@@ -155,8 +282,10 @@ const UploadCertificate: React.FC = () => {
       alert('Transaction submitted. Waiting for confirmation...');
       await tx.wait();
 
+      await makePayment();
+
       toast.success('Certificate issued successfully!!');
-      
+
       setFormData({
         studentAddress: '',
         certificateId: '',
@@ -167,7 +296,9 @@ const UploadCertificate: React.FC = () => {
         ipfsHash: '',
       });
       setFile(null);
-      
+      localStorage.removeItem("certificateData");
+
+
     } catch (err: unknown) {
       console.error(err);
       if (typeof err === 'object' && err !== null) {
@@ -199,7 +330,7 @@ const UploadCertificate: React.FC = () => {
     {
       name: 'studentName',
       label: 'Student Name',
-      placeholder: 'John Doe',
+      placeholder: 'Ram Ji',
       icon: <User className="w-5 h-5" />,
       type: 'text'
     },
@@ -230,8 +361,8 @@ const UploadCertificate: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        
-        
+
+
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl mb-6 shadow-xl">
             <Upload className="w-10 h-10 text-white" />
@@ -246,7 +377,7 @@ const UploadCertificate: React.FC = () => {
 
         {/* Main Form Container */}
         <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-          
+
           {/* Status Bar */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
             <div className="flex items-center justify-between text-white">
@@ -265,7 +396,7 @@ const UploadCertificate: React.FC = () => {
 
           {/* Form Content */}
           <div className="p-8 space-y-8">
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {inputFields.map((field) => (
                 field.name === 'certificateId' ? (
@@ -274,7 +405,7 @@ const UploadCertificate: React.FC = () => {
                       <span className="text-blue-600">{field.icon}</span>
                       <span>{field.label}</span>
                     </label>
-                    
+
                     <div className="flex gap-2">
                       <div className="relative group flex-1">
                         <input
@@ -284,24 +415,23 @@ const UploadCertificate: React.FC = () => {
                           onChange={handleChange}
                           readOnly
                           placeholder={field.placeholder}
-                          className={`w-full px-4 py-4 pl-12 text-black rounded-xl border-2 transition-all duration-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-                            errors[field.name] 
-                              ? 'border-red-300 focus:border-red-500' 
-                              : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
-                          }`}
+                          className={`w-full px-4 py-4 pl-12 text-black rounded-xl border-2 transition-all duration-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors[field.name]
+                            ? 'border-red-300 focus:border-red-500'
+                            : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
+                            }`}
                         />
-            
+
                         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200">
                           {field.icon}
                         </div>
-            
+
                         {formData[field.name] && !errors[field.name] && (
                           <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500">
                             <CheckCircle className="w-5 h-5" />
                           </div>
                         )}
                       </div>
-                      
+
                       <button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, certificateId: generateCertificateId() }))}
@@ -310,7 +440,7 @@ const UploadCertificate: React.FC = () => {
                         Generate ID
                       </button>
                     </div>
-                    
+
                     {errors[field.name] && (
                       <div className="flex items-center space-x-2 text-red-500 text-sm mt-2">
                         <AlertCircle className="w-4 h-4" />
@@ -324,7 +454,7 @@ const UploadCertificate: React.FC = () => {
                       <span className="text-blue-600">{field.icon}</span>
                       <span>{field.label}</span>
                     </label>
-                    
+
                     <div className="relative group">
                       <input
                         type={field.type}
@@ -332,24 +462,23 @@ const UploadCertificate: React.FC = () => {
                         value={formData[field.name]}
                         onChange={handleChange}
                         placeholder={field.placeholder}
-                        className={`w-full px-4 py-4 pl-12 text-black rounded-xl border-2 transition-all duration-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
-                          errors[field.name] 
-                            ? 'border-red-300 focus:border-red-500' 
-                            : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
-                        }`}
+                        className={`w-full px-4 py-4 pl-12 text-black rounded-xl border-2 transition-all duration-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors[field.name]
+                          ? 'border-red-300 focus:border-red-500'
+                          : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
+                          }`}
                       />
-            
+
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200">
                         {field.icon}
                       </div>
-                      
+
                       {formData[field.name] && !errors[field.name] && (
                         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500">
                           <CheckCircle className="w-5 h-5" />
                         </div>
                       )}
                     </div>
-                    
+
                     {errors[field.name] && (
                       <div className="flex items-center space-x-2 text-red-500 text-sm mt-2">
                         <AlertCircle className="w-4 h-4" />
@@ -369,7 +498,7 @@ const UploadCertificate: React.FC = () => {
                   <span className="text-blue-600 text-xs">(Uploading to IPFS...)</span>
                 )}
               </label>
-              
+
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50/30 cursor-pointer">
                 <input
                   type="file"
@@ -402,7 +531,7 @@ const UploadCertificate: React.FC = () => {
                   )}
                 </label>
               </div>
-              
+
               {file && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <div className="flex items-center justify-between">
@@ -428,16 +557,16 @@ const UploadCertificate: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
               <button
                 type="button"
-                className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="flex-1 px-6 py-4 border-2 cursor-pointer border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
               >
                 Save as Draft
               </button>
-              
+
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || uploadingToPinata}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
+                className="flex-1 bg-gradient-to-r from-blue-600 cursor-pointer to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
               >
                 {loading || uploadingToPinata ? (
                   <>
@@ -464,7 +593,7 @@ const UploadCertificate: React.FC = () => {
                 <h3 className="font-semibold text-gray-800 text-sm">Blockchain Verified</h3>
                 <p className="text-xs text-gray-600 mt-1">Immutable and tamper-proof</p>
               </div>
-              
+
               <div className="text-center p-4 bg-purple-50 rounded-xl">
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
                   <MapPin className="w-5 h-5 text-purple-600" />
@@ -472,7 +601,7 @@ const UploadCertificate: React.FC = () => {
                 <h3 className="font-semibold text-gray-800 text-sm">IPFS Storage</h3>
                 <p className="text-xs text-gray-600 mt-1">Decentralized file storage</p>
               </div>
-              
+
               <div className="text-center p-4 bg-green-50 rounded-xl">
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
                   <GraduationCap className="w-5 h-5 text-green-600" />
@@ -488,4 +617,14 @@ const UploadCertificate: React.FC = () => {
   );
 };
 
-export default UploadCertificate;
+
+
+
+
+export default function UploadCertificate() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <UploadPageContent />
+    </Suspense>
+  );
+}

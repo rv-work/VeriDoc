@@ -1,68 +1,26 @@
 "use client"
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Star, 
-  Check, 
-  Upload, 
-  Search, 
-  Crown, 
-  Zap, 
-  Globe, 
-  Lock, 
+import React, { useState } from 'react';
+import {
+  Shield,
+  Star,
+  Check,
+  Upload,
+  Search,
+  Crown,
+  Zap,
+  Globe,
+  Lock,
   Smartphone,
   BarChart3,
-  HeadphonesIcon,
+  Headphones,
   ArrowRight,
   Sparkles,
   CheckCircle
 } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
 
 // TypeScript interfaces
-interface RazorpayResponse {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-}
-
-interface RazorpayOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  image?: string;
-  order_id: string;
-  handler: (response: RazorpayResponse) => void;
-  prefill?: {
-    name?: string;
-    email?: string;
-    contact?: string;
-  };
-  notes?: Record<string, string>;
-  theme?: {
-    color?: string;
-  };
-  modal?: {
-    ondismiss?: () => void;
-  };
-}
-
-interface OrderData {
-  id: string;
-  amount: number;
-  currency: string;
-}
-
-declare global {
-  interface Window {
-    Razorpay: new (options: RazorpayOptions) => {
-      open: () => void;
-    };
-  }
-}
-
 interface PayPerUseOption {
   title: string;
   description: string;
@@ -92,138 +50,54 @@ interface Feature {
   icon: React.ReactNode;
 }
 
-// Razorpay payment handler
-const handlePayment = async (planType: string, amount: number, planName: string): Promise<void> => {
-  try {
-    // Check if Razorpay is loaded
-    if (!window.Razorpay) {
-      throw new Error('Razorpay SDK not loaded');
-    }
+const handleStripePayment = async (planName: string, amount: number): Promise<void> => {
+  const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ")
 
-    // Step 1: Create order on backend
-    const response = await fetch('http://localhost:5000/api/create-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: amount * 100, 
-        currency: 'INR',
-        planType: planType,
-        planName: planName
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to create order');
-    }
-
-    const orderData: OrderData = await response.json();
-
-    const options: RazorpayOptions = {
-      key: 'rzp_test_YOUR_KEY_ID', // Replace with your Razorpay Key ID
-      amount: orderData.amount,
-      currency: orderData.currency,
-      name: 'VeriDoc',
-      description: `Payment for ${planName}`,
-      image: '/logo.png', // Your logo URL
-      order_id: orderData.id,
-      handler: function (response: RazorpayResponse) {
-        // Payment successful
-        alert('Payment Successful!');
-        console.log('Payment ID:', response.razorpay_payment_id);
-        console.log('Order ID:', response.razorpay_order_id);
-        console.log('Signature:', response.razorpay_signature);
-        
-        // Verify payment on backend
-        verifyPayment(response);
-      },
-      prefill: {
-        name: 'Customer Name',
-        email: 'customer@example.com',
-        contact: '9999999999'
-      },
-      notes: {
-        address: 'VeriDoc Corporate Office'
-      },
-      theme: {
-        color: '#3B82F6'
-      },
-      modal: {
-        ondismiss: function() {
-          alert('Payment cancelled');
-        }
-      }
-    };
-
-    // Step 3: Open Razorpay checkout
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-  } catch (error) {
-    console.error('Payment error:', error);
-    alert('Payment failed. Please try again.');
+  const response = await fetch('http://localhost:5000/api/payment/create-order', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      planName,
+      amount,
+      successUrl: "http://localhost:3000/payment/success",
+      cancelUrl: "http://localhost:3000/payment/cancel",
+    }),
+    credentials: 'include',
   }
-};
+  );
 
-// Verify payment on backend
-const verifyPayment = async (paymentData: RazorpayResponse): Promise<void> => {
-  try {
-    const response = await fetch('/api/verify-payment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to verify payment');
-    }
-
-    const result = await response.json();
-    if (result.success) {
-      alert('Payment verified successfully!');
-      // Redirect to dashboard or success page
-      window.location.href = '/dashboard';
-    } else {
-      alert('Payment verification failed');
-    }
-  } catch (error) {
-    console.error('Verification error:', error);
-    alert('Payment verification failed. Please try again.');
+  if (!response.ok) {
+    throw new Error('Failed to create checkout session');
   }
-};
+
+  const session = await response.json();
+
+  console.log("session ", session)
+
+  const result = await stripe?.redirectToCheckout({
+    sessionId: session.id,
+  });
+
+  if (result?.error) {
+    console.error(result.error.message);
+  }
+
+}
+
+
+
 
 const Premium: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
-  const [razorpayLoaded, setRazorpayLoaded] = useState<boolean>(false);
-
-  useEffect(() => {
-    const loadRazorpay = () => {
-      return new Promise<boolean>((resolve) => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = () => {
-          setRazorpayLoaded(true);
-          resolve(true);
-        };
-        script.onerror = () => {
-          console.error('Failed to load Razorpay SDK');
-          resolve(false);
-        };
-        document.body.appendChild(script);
-      });
-    };
-
-    loadRazorpay();
-  }, []);
 
   const payPerUseOptions: PayPerUseOption[] = [
     {
       title: "Pay Per Upload",
       description: "Perfect for universities with occasional certificate uploads",
-      price: "₹50",
-      priceNumber: 50,
+      price: "₹250",
+      priceNumber: 250,
       icon: <Upload className="w-6 h-6" />,
       features: [
         "Blockchain certificate upload",
@@ -236,8 +110,8 @@ const Premium: React.FC = () => {
     {
       title: "Pay Per Verification",
       description: "Ideal for recruiters and companies verifying credentials",
-      price: "₹25",
-      priceNumber: 25,
+      price: "₹250",
+      priceNumber: 250,
       icon: <Search className="w-6 h-6" />,
       features: [
         "Instant verification",
@@ -270,7 +144,7 @@ const Premium: React.FC = () => {
       buttonStyle: "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
     },
     {
-      name: "Pro",
+      name: "Premium",
       description: "Most popular choice for growing universities",
       price: "₹7,999",
       priceNumber: 7999,
@@ -342,31 +216,15 @@ const Premium: React.FC = () => {
     {
       title: "24/7 Support",
       description: "Round-the-clock technical support when you need it",
-      icon: <HeadphonesIcon className="w-6 h-6 text-indigo-500" />
+      icon: <Headphones className="w-6 h-6 text-indigo-500" />
     }
   ];
 
-  const handlePlanSelection = async (planType: string, amount: number, planName: string): Promise<void> => {
-    if (!razorpayLoaded) {
-      alert('Payment system is loading. Please try again in a moment.');
-      return;
-    }
-
-    if (planName === 'Enterprise') {
-      // For enterprise, redirect to contact page
-      window.location.href = '/contact';
-      return;
-    }
-
-    if (planName === 'Free Trial') {
-      // Handle free trial signup
-      window.location.href = '/signup?trial=true';
-      return;
-    }
+  const handlePlanSelection = async (planName: string, amount: number): Promise<void> => {
 
     setLoading(true);
     try {
-      await handlePayment(planType, amount, planName);
+      await handleStripePayment(planName.toLowerCase(), amount);
     } catch (error) {
       console.error('Plan selection error:', error);
     } finally {
@@ -376,7 +234,6 @@ const Premium: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      {/* Hero Section */}
       <div className="bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-black/20"></div>
         <div className="absolute inset-0 opacity-10">
@@ -384,7 +241,7 @@ const Premium: React.FC = () => {
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }} />
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
           <div className="text-center">
             <div className="flex justify-center mb-6">
@@ -392,7 +249,7 @@ const Premium: React.FC = () => {
                 <Shield className="w-12 h-12 text-white" />
               </div>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               Choose Your{' '}
               <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -400,12 +257,12 @@ const Premium: React.FC = () => {
               </span>
               {' '}Plan
             </h1>
-            
+
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-              Secure, verify, and manage academic credentials with blockchain technology. 
+              Secure, verify, and manage academic credentials with blockchain technology.
               Pay only for what you use or choose a plan that grows with you.
             </p>
-            
+
             <div className="flex justify-center items-center space-x-4 text-sm">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-green-400" />
@@ -424,7 +281,7 @@ const Premium: React.FC = () => {
         </div>
       </div>
 
-      {/* Pay Per Use Section */}
+      {/* Pay Per Use Section - Static Display Only */}
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -438,32 +295,20 @@ const Premium: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {payPerUseOptions.map((option, index) => (
-              <div 
+              <div
                 key={index}
-                className={`relative bg-white rounded-3xl shadow-xl border-2 p-8 transition-all duration-300 hover:scale-105 ${
-                  option.popular 
-                    ? 'border-gradient-to-r from-blue-500 to-purple-500 ring-4 ring-blue-200' 
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
+                className="relative bg-white rounded-3xl shadow-xl border-2 border-gray-200 p-8 opacity-75"
               >
-                {option.popular && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                
                 <div className="text-center mb-8">
                   <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl p-4 w-fit mx-auto mb-4">
                     <div className="text-blue-600">
                       {option.icon}
                     </div>
                   </div>
-                  
+
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{option.title}</h3>
                   <p className="text-gray-600 mb-4">{option.description}</p>
-                  
+
                   <div className="flex items-center justify-center">
                     <span className="text-4xl font-bold text-gray-900">{option.price}</span>
                     <span className="text-gray-600 ml-2">per transaction</span>
@@ -479,16 +324,14 @@ const Premium: React.FC = () => {
                   ))}
                 </ul>
 
-                <button 
-                  onClick={() => handlePlanSelection('payperuse', option.priceNumber, option.title)}
-                  disabled={loading || !razorpayLoaded}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>
-                    {loading ? 'Processing...' : !razorpayLoaded ? 'Loading...' : 'Get Started'}
-                  </span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+                <div className="relative">
+                  <button
+                    disabled
+                    className="w-full bg-gray-400 text-white py-4 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center space-x-2"
+                  >
+                    <span>Coming Soon</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -509,13 +352,12 @@ const Premium: React.FC = () => {
 
           <div className="grid lg:grid-cols-3 gap-8">
             {pricingPlans.map((plan, index) => (
-              <div 
+              <div
                 key={index}
-                className={`relative bg-white rounded-3xl shadow-xl border-2 p-8 transition-all duration-300 hover:scale-105 ${
-                  plan.popular 
-                    ? 'border-gradient-to-r from-blue-500 to-purple-500 ring-4 ring-blue-200 transform scale-105' 
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
+                className={`relative bg-white rounded-3xl shadow-xl border-2 p-8 transition-all duration-300 hover:scale-105 ${plan.popular
+                  ? 'border-gradient-to-r from-blue-500 to-purple-500 ring-4 ring-blue-200 transform scale-105'
+                  : 'border-gray-200 hover:border-blue-300'
+                  }`}
               >
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -525,22 +367,22 @@ const Premium: React.FC = () => {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="text-center mb-8">
                   <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl p-4 w-fit mx-auto mb-4">
                     <div className="text-blue-600">
                       {plan.icon}
                     </div>
                   </div>
-                  
+
                   <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
                   <p className="text-gray-600 mb-6">{plan.description}</p>
-                  
+
                   <div className="flex items-center justify-center mb-2">
                     <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
                     <span className="text-gray-600 ml-1">{plan.billingCycle}</span>
                   </div>
-                  
+
                   {plan.name !== 'Enterprise' && (
                     <p className="text-sm text-green-600 font-semibold">
                       Save 20% with annual billing
@@ -557,15 +399,13 @@ const Premium: React.FC = () => {
                   ))}
                 </ul>
 
-                <button 
-                  onClick={() => handlePlanSelection('subscription', plan.priceNumber, plan.name)}
-                  disabled={loading || (!razorpayLoaded && plan.name !== 'Enterprise')}
+                <button
+                  onClick={() => handlePlanSelection(plan.name, plan.priceNumber)}
+                  disabled={loading}
                   className={`w-full py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${plan.buttonStyle}`}
                 >
                   <span>
-                    {loading ? 'Processing...' : 
-                     (!razorpayLoaded && plan.name !== 'Enterprise') ? 'Loading...' : 
-                     plan.buttonText}
+                    {loading ? 'Processing...' : plan.buttonText}
                   </span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
@@ -589,7 +429,7 @@ const Premium: React.FC = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {additionalFeatures.map((feature, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
@@ -613,23 +453,23 @@ const Premium: React.FC = () => {
           <p className="text-xl text-gray-300 mb-8">
             Join hundreds of institutions already using VeriDoc to secure and verify academic credentials.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={() => handlePlanSelection('trial', 0, 'Free Trial')}
+            <button
+              onClick={() => handlePlanSelection('Free Trial', 0)}
               className="bg-white text-blue-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-2"
             >
               <span>Start Free Trial</span>
               <ArrowRight className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={() => window.location.href = '/demo'}
               className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-blue-900 transition-all duration-200"
             >
               Schedule Demo
             </button>
           </div>
-          
+
           <p className="text-gray-400 mt-6 text-sm">
             No credit card required • Setup in minutes • 30-day money-back guarantee
           </p>
