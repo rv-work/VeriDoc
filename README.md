@@ -1,4 +1,4 @@
-# 🎓 CertiChain - Decentralized Certificate Verification Platform
+# 🎓 VeriDoc - Decentralized Certificate Verification Platform
 
 A powerful Web3 platform to **issue, verify, and manage certificates and degrees** on the blockchain — secure, tamper-proof, and instantly verifiable.
 
