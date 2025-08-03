@@ -24,6 +24,7 @@ import {
   CreditCard,
   Trash2,
   RefreshCw,
+  Wallet, WifiOff,
 } from "lucide-react";
 import { useWeb3 } from "@/app/context/Web3Context";
 import { useParams } from "next/navigation";
@@ -57,7 +58,8 @@ const VERIFICATION_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
 const CertificateVerification: React.FC = () => {
   const params = useParams();
-  const { contractInstance } = useWeb3();
+
+  const { contractInstance, connectWallet } = useWeb3();
 
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -77,6 +79,9 @@ const CertificateVerification: React.FC = () => {
   const [canVerify, setCanVerify] = useState<boolean>(false);
   const [verifiedCertificates, setVerifiedCertificates] = useState<VerifiedCertificate[]>([]);
   const [isAlreadyVerified, setIsAlreadyVerified] = useState<boolean>(false);
+
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [connectingWallet, setConnectingWallet] = useState(false);
 
   const { isPremium } = useAuth();
 
@@ -176,6 +181,27 @@ const CertificateVerification: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (contractInstance) {
+      setIsWalletConnected(true);
+    } else {
+      setIsWalletConnected(false);
+    }
+  }, [contractInstance]);
+
+  const handleConnectWallet = async () => {
+    try {
+      setConnectingWallet(true);
+      await connectWallet();
+      toast.success('Wallet connected successfully!');
+    } catch (error) {
+      console.error('Error connecting wallet:', error);
+      toast.error('Failed to connect wallet. Please try again.');
+    } finally {
+      setConnectingWallet(false);
+    }
+  };
+
   // Initialize verification status
   useEffect(() => {
     const certificates = loadVerifiedCertificates();
@@ -189,6 +215,10 @@ const CertificateVerification: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [certificateId, universityAddress, studentAddress, isPremium]);
+
+
+
+
 
   const handleView = async (add: string, hash: string) => {
     try {
@@ -302,7 +332,7 @@ const CertificateVerification: React.FC = () => {
   // Enhanced certificate fetching
   useEffect(() => {
     const fetchCertificate = async () => {
-      if (!contractInstance || !universityAddress || !studentAddress || !certificateId || !canVerify) {
+      if (!contractInstance || !universityAddress || !studentAddress || !certificateId || !canVerify || !isWalletConnected) {
         if (!canVerify && !processingPayment) {
           setLoading(false);
         }
@@ -421,7 +451,7 @@ const CertificateVerification: React.FC = () => {
 
     fetchCertificate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contractInstance, universityAddress, studentAddress, certificateId, canVerify]);
+  }, [contractInstance, universityAddress, studentAddress, certificateId, canVerify, isWalletConnected]);
 
   // Chrome-optimized clipboard function
   const copyToClipboard = async (text: string) => {
@@ -605,6 +635,102 @@ const CertificateVerification: React.FC = () => {
     );
   }
 
+  if (!contractInstance) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Header Section */}
+          <header className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-lg mb-4">
+              <Shield className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              Connect Wallet
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Connect your wallet to access certificate verification
+            </p>
+          </header>
+
+          {/* Wallet Connection Card */}
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
+              <div className="flex items-center justify-center text-white">
+                <div className="text-center">
+                  <Wallet className="w-12 h-12 mx-auto mb-3" />
+                  <h2 className="text-2xl font-bold">Wallet Required</h2>
+                  <p className="text-white/90 mt-1">
+                    Connect your Web3 wallet to view certificate details
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
+                  <WifiOff className="w-8 h-8 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  Wallet Not Connected
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  You have successfully paid for certificate verification. Now connect your wallet to access the blockchain and view certificate details.
+                </p>
+
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100 mb-6">
+                  <div className="text-lg font-semibold text-amber-800 mb-2">Payment Verified ✓</div>
+                  <div className="text-amber-700 text-sm">Your payment has been processed successfully</div>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>Secure wallet connection</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>Access to blockchain verification</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>View complete certificate details</span>
+                </div>
+                <div className="flex items-center space-x-3 text-gray-700">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>No additional charges</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleConnectWallet}
+                disabled={connectingWallet}
+                className="w-full cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
+              >
+                {connectingWallet ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Connecting Wallet...</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5" />
+                    <span>Connect Wallet</span>
+                  </>
+                )}
+              </button>
+
+              <p className="text-center text-gray-500 text-sm mt-4">
+                We support MetaMask and other Web3 wallets
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -659,7 +785,8 @@ const CertificateVerification: React.FC = () => {
           </div>
         )}
 
-        {/* Main Verification Card */}
+
+
         <main className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden mb-6">
           {loading ? (
             <div className="p-12 text-center">
@@ -680,25 +807,80 @@ const CertificateVerification: React.FC = () => {
               </div>
             </div>
           ) : error ? (
-            <div className="p-12 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-                <AlertCircle className="w-8 h-8 text-red-600" />
+            error.includes('Certificate not found') ? (
+              // Certificate Not Found Screen
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-100 py-8 px-4">
+                <div className="max-w-2xl mx-auto">
+                  <header className="text-center mb-8">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl shadow-lg mb-4">
+                      <XCircle className="w-10 h-10 text-white" />
+                    </div>
+                    <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                      Certificate Not Found
+                    </h1>
+                    <p className="text-gray-600 text-lg">
+                      The requested certificate could not be found
+                    </p>
+                  </header>
+
+                  <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+                    <div className="p-12 text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                        <FileCheck className="w-8 h-8 text-red-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-red-800 mb-2">
+                        Certificate Not Found
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        The certificate with the provided details does not exist on the blockchain or may have been removed.
+                      </p>
+
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                        <div className="text-left space-y-2 text-sm">
+                          <div><strong>Certificate ID:</strong> {certificateId}</div>
+                          <div><strong>University:</strong> {universityAddress?.slice(0, 8)}...{universityAddress?.slice(-6)}</div>
+                          <div><strong>Student:</strong> {studentAddress?.slice(0, 8)}...{studentAddress?.slice(-6)}</div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 text-sm text-gray-600 mb-6">
+                        <p>• Please verify the URL parameters are correct</p>
+                        <p>• The certificate may have been revoked by the institution</p>
+                        <p>• Contact the issuing institution for assistance</p>
+                      </div>
+
+                      <button
+                        onClick={() => window.location.reload()}
+                        className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-red-800 mb-2">
-                Verification Failed
-              </h3>
-              <div className="bg-red-100 text-red-700 p-4 rounded-xl flex items-center justify-center gap-2 max-w-md mx-auto">
-                <AlertCircle className="text-red-500" />
-                <span>{error}</span>
+            ) : (
+              // General Error Screen  
+              <div className="p-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-red-800 mb-2">
+                  Verification Failed
+                </h3>
+                <div className="bg-red-100 text-red-700 p-4 rounded-xl flex items-center justify-center gap-2 max-w-md mx-auto">
+                  <AlertCircle className="text-red-500" />
+                  <span>{error}</span>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  aria-label="Retry verification"
+                >
+                  Try Again
+                </button>
               </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-6 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                aria-label="Retry verification"
-              >
-                Try Again
-              </button>
-            </div>
+            )
           ) : certificateData ? (
             <>
               {/* Validity Status Banner */}
@@ -728,6 +910,8 @@ const CertificateVerification: React.FC = () => {
                   </div>
                 </div>
               </section>
+
+
 
               {/* Certificate Details */}
               <section className="p-8">
