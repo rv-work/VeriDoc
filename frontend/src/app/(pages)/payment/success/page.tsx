@@ -74,15 +74,15 @@ const SuccessClient = () => {
 
   if (isProcessing) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
         {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden opacity-20">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-32 h-32 bg-cyan-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-500"></div>
+        <div className="absolute inset-0 overflow-hidden opacity-10">
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+          <div className="absolute top-3/4 right-1/4 w-32 h-32 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl animate-pulse delay-500"></div>
         </div>
 
-        <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/20 text-center max-w-md w-full">
+        <div className="relative bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-gray-200 text-center max-w-md w-full">
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="w-16 h-16 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full flex items-center justify-center animate-spin">
@@ -91,13 +91,13 @@ const SuccessClient = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full animate-ping opacity-20"></div>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Processing Payment</h2>
-          <p className="text-gray-300">Please wait while we confirm your subscription...</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Processing Payment</h2>
+          <p className="text-gray-600">Please wait while we confirm your subscription...</p>
           <div className="flex justify-center mt-4">
             <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-100"></div>
-              <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce delay-200"></div>
+              <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-200"></div>
             </div>
           </div>
         </div>
@@ -107,15 +107,15 @@ const SuccessClient = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="relative bg-white/10 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-red-300/20 text-center max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 flex items-center justify-center p-4">
+        <div className="relative bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-red-200 text-center max-w-md w-full">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-pink-600 rounded-full flex items-center justify-center">
               <Shield className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Payment Error</h2>
-          <p className="text-gray-300 mb-6">{error}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Error</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={handleGoHome}
             className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-400 hover:to-pink-500 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-red-500/25 transform hover:-translate-y-0.5"
@@ -129,30 +129,30 @@ const SuccessClient = () => {
 
   if (paymentConfirmed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 relative overflow-hidden">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-500"></div>
+          <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+          <div className="absolute top-3/4 right-1/4 w-72 h-72 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
+          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-500"></div>
 
           {/* Floating Elements */}
-          <div className="absolute top-20 left-20 text-cyan-400 opacity-60 animate-bounce">
+          <div className="absolute top-20 left-20 text-cyan-500 opacity-40 animate-bounce">
             <Star className="w-6 h-6" />
           </div>
-          <div className="absolute top-32 right-32 text-purple-400 opacity-60 animate-bounce delay-300">
+          <div className="absolute top-32 right-32 text-purple-500 opacity-40 animate-bounce delay-300">
             <Sparkles className="w-8 h-8" />
           </div>
-          <div className="absolute bottom-32 left-32 text-pink-400 opacity-60 animate-bounce delay-700">
+          <div className="absolute bottom-32 left-32 text-pink-500 opacity-40 animate-bounce delay-700">
             <Crown className="w-7 h-7" />
           </div>
-          <div className="absolute bottom-20 right-20 text-yellow-400 opacity-60 animate-bounce delay-1000">
+          <div className="absolute bottom-20 right-20 text-yellow-500 opacity-40 animate-bounce delay-1000">
             <Gift className="w-6 h-6" />
           </div>
         </div>
 
         <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 md:p-12 shadow-2xl border border-white/20 text-center max-w-2xl w-full">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 md:p-12 shadow-2xl border border-gray-200 text-center max-w-2xl w-full">
 
             {/* Success Icon with Animation */}
             <div className="flex justify-center mb-8">
@@ -169,41 +169,41 @@ const SuccessClient = () => {
 
             {/* Success Message */}
             <div className="mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
                 🎉 Payment Successful!
               </h1>
-              <p className="text-xl text-gray-300 mb-2">
-                Welcome to <span className="text-cyan-400 font-semibold">VeriDoc Premium</span>!
+              <p className="text-xl text-gray-700 mb-2">
+                Welcome to <span className="text-cyan-600 font-semibold">VeriDoc Premium</span>!
               </p>
-              <p className="text-gray-400">
-                Your <span className="text-purple-400 font-medium">{planName || 'Premium'}</span> subscription is now active
+              <p className="text-gray-600">
+                Your <span className="text-purple-600 font-medium">{planName || 'Premium'}</span> subscription is now active
               </p>
             </div>
 
             {/* Features Preview */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-cyan-400/30 transition-all duration-300">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-cyan-300 transition-all duration-300 hover:shadow-md">
                 <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <Shield className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-white font-semibold text-sm mb-1">Enhanced Security</h3>
-                <p className="text-gray-400 text-xs">Advanced verification features</p>
+                <h3 className="text-gray-900 font-semibold text-sm mb-1">Enhanced Security</h3>
+                <p className="text-gray-600 text-xs">Advanced verification features</p>
               </div>
 
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-purple-400/30 transition-all duration-300">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-purple-300 transition-all duration-300 hover:shadow-md">
                 <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-white font-semibold text-sm mb-1">Priority Support</h3>
-                <p className="text-gray-400 text-xs">24/7 premium assistance</p>
+                <h3 className="text-gray-900 font-semibold text-sm mb-1">Priority Support</h3>
+                <p className="text-gray-600 text-xs">24/7 premium assistance</p>
               </div>
 
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-pink-400/30 transition-all duration-300">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-pink-300 transition-all duration-300 hover:shadow-md">
                 <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-600 rounded-lg flex items-center justify-center mx-auto mb-3">
                   <Crown className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-white font-semibold text-sm mb-1">Exclusive Features</h3>
-                <p className="text-gray-400 text-xs">Access to premium tools</p>
+                <h3 className="text-gray-900 font-semibold text-sm mb-1">Exclusive Features</h3>
+                <p className="text-gray-600 text-xs">Access to premium tools</p>
               </div>
             </div>
 
@@ -220,7 +220,7 @@ const SuccessClient = () => {
 
               <button
                 onClick={handleGoHome}
-                className="flex items-center justify-center space-x-2 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300 border border-white/20 hover:border-white/40 backdrop-blur-sm"
+                className="flex items-center justify-center space-x-2 px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold transition-all duration-300 border border-gray-200 hover:border-gray-300 shadow-md hover:shadow-lg"
               >
                 <Home className="w-5 h-5" />
                 <span>Go to Dashboard</span>
@@ -228,8 +228,8 @@ const SuccessClient = () => {
             </div>
 
             {/* Footer Message */}
-            <div className="mt-8 pt-6 border-t border-white/10">
-              <p className="text-gray-400 text-sm">
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-gray-600 text-sm">
                 🔒 Your subscription details have been sent to your email
               </p>
             </div>
@@ -245,8 +245,8 @@ const SuccessClient = () => {
 export default function SuccessPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading payment details...</div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-gray-800 text-xl">Loading payment details...</div>
       </div>
     }>
       <SuccessClient />

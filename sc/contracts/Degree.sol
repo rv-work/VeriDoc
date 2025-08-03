@@ -11,7 +11,7 @@ contract DegreeRegistry {
         string rollNo;
         string issueDate;
         string ipfsHash;
-        address studentWallet; // ✅ NEW
+        address studentWallet;
         address issuedBy;
         bool isValid;
     }
@@ -29,7 +29,8 @@ contract DegreeRegistry {
     mapping(address => bool) public isUniversity;
 
     // university => student => certificateId => Degree
-    mapping(address => mapping(address => mapping(string => Degree))) public degrees;
+    mapping(address => mapping(address => mapping(string => Degree)))
+        public degrees;
 
     // student => certificateIds[]
     mapping(address => string[]) public studentCertificateIds;
@@ -45,8 +46,17 @@ contract DegreeRegistry {
 
     event UniversityAdded(address indexed university);
     event UniversityRemoved(address indexed university);
-    event DegreeIssued(address indexed university, address indexed student, string certificateId, string ipfsHash);
-    event DegreeRevoked(address indexed university, address indexed student, string certificateId);
+    event DegreeIssued(
+        address indexed university,
+        address indexed student,
+        string certificateId,
+        string ipfsHash
+    );
+    event DegreeRevoked(
+        address indexed university,
+        address indexed student,
+        string certificateId
+    );
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can perform this action");
@@ -54,7 +64,10 @@ contract DegreeRegistry {
     }
 
     modifier onlyUniversity() {
-        require(isUniversity[msg.sender], "Only verified universities can issue degrees");
+        require(
+            isUniversity[msg.sender],
+            "Only verified universities can issue degrees"
+        );
         _;
     }
 
@@ -81,7 +94,11 @@ contract DegreeRegistry {
         string memory issueDate,
         string memory ipfsHash
     ) external onlyUniversity {
-        require(bytes(degrees[msg.sender][student][certificateId].certificateId).length == 0, "Certificate ID already used");
+        require(
+            bytes(degrees[msg.sender][student][certificateId].certificateId)
+                .length == 0,
+            "Certificate ID already used"
+        );
 
         Degree memory degree = Degree({
             certificateId: certificateId,
@@ -105,13 +122,23 @@ contract DegreeRegistry {
         emit DegreeIssued(msg.sender, student, certificateId, ipfsHash);
     }
 
-    function issueDegreesBulk(BulkDegreeInput[] memory inputs) external onlyUniversity {
+    function issueDegreesBulk(
+        BulkDegreeInput[] memory inputs
+    ) external onlyUniversity {
         for (uint i = 0; i < inputs.length; i++) {
             BulkDegreeInput memory input = inputs[i];
 
             require(
-                bytes(degrees[msg.sender][input.student][input.certificateId].certificateId).length == 0,
-                string(abi.encodePacked("Duplicate certificateId: ", input.certificateId))
+                bytes(
+                    degrees[msg.sender][input.student][input.certificateId]
+                        .certificateId
+                ).length == 0,
+                string(
+                    abi.encodePacked(
+                        "Duplicate certificateId: ",
+                        input.certificateId
+                    )
+                )
             );
 
             Degree memory degree = Degree({
@@ -128,30 +155,49 @@ contract DegreeRegistry {
 
             degrees[msg.sender][input.student][input.certificateId] = degree;
             studentCertificateIds[input.student].push(input.certificateId);
-            certificateIssuedBy[input.student][input.certificateId] = msg.sender;
+            certificateIssuedBy[input.student][input.certificateId] = msg
+                .sender;
 
-            universityIssuedCertificateIds[msg.sender].push(input.certificateId);
+            universityIssuedCertificateIds[msg.sender].push(
+                input.certificateId
+            );
             universityIssuedTo[msg.sender][input.certificateId] = input.student;
 
-            emit DegreeIssued(msg.sender, input.student, input.certificateId, input.ipfsHash);
+            emit DegreeIssued(
+                msg.sender,
+                input.student,
+                input.certificateId,
+                input.ipfsHash
+            );
         }
     }
 
-    function revokeDegree(address student, string memory certificateId) external onlyUniversity {
+    function revokeDegree(
+        address student,
+        string memory certificateId
+    ) external onlyUniversity {
         degrees[msg.sender][student][certificateId].isValid = false;
         emit DegreeRevoked(msg.sender, student, certificateId);
     }
 
-    function verifyDegree(address university, address student, string memory certificateId) external view returns (
-        string memory studentName,
-        string memory course,
-        string memory rollNo,
-        string memory issueDate,
-        string memory ipfsHash,
-        address studentWallet,
-        bool isValid,
-        address issuedBy
-    ) {
+    function verifyDegree(
+        address university,
+        address student,
+        string memory certificateId
+    )
+        external
+        view
+        returns (
+            string memory studentName,
+            string memory course,
+            string memory rollNo,
+            string memory issueDate,
+            string memory ipfsHash,
+            address studentWallet,
+            bool isValid,
+            address issuedBy
+        )
+    {
         Degree memory d = degrees[university][student][certificateId];
         return (
             d.studentName,
@@ -165,9 +211,9 @@ contract DegreeRegistry {
         );
     }
 
-    function getStudentCertificates(address student) external view returns (
-        Degree[] memory
-    ) {
+    function getStudentCertificates(
+        address student
+    ) external view returns (Degree[] memory) {
         string[] memory certIds = studentCertificateIds[student];
         Degree[] memory allDegrees = new Degree[](certIds.length);
 
@@ -179,9 +225,12 @@ contract DegreeRegistry {
         return allDegrees;
     }
 
-    function getUniversityIssuedCertificates() external view onlyUniversity returns (
-        Degree[] memory
-    ) {
+    function getUniversityIssuedCertificates()
+        external
+        view
+        onlyUniversity
+        returns (Degree[] memory)
+    {
         string[] memory certIds = universityIssuedCertificateIds[msg.sender];
         Degree[] memory allDegrees = new Degree[](certIds.length);
 

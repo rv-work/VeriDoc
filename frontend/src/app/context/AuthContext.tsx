@@ -8,8 +8,6 @@ interface AuthContextType {
   setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>>;
   isPremium: boolean;
   setIsPremium: React.Dispatch<React.SetStateAction<boolean>>;
-  balance: number;
-  setBalance: React.Dispatch<React.SetStateAction<number>>;
   userRole: string | null;
   setUserRole: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -24,10 +22,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isPremium, setIsPremium] = useState<boolean>(false);
-  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
     const fetchLoggedInStatus = async () => {
+      console.log("called.....123")
       try {
         const response = await fetch('http://localhost:5000/api/auth/check', {
           method: 'GET',
@@ -36,12 +34,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("pre : ", isPremium)
           setIsLoggedIn(data.success);
           setUserRole(data.userRole);
           setIsPremium(data.isPremium);
-          setBalance(data.balance)
-          console.log("balance : ", data.balance)
-          console.log("role")
         } else {
           setIsLoggedIn(false);
         }
@@ -51,10 +47,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
     };
     fetchLoggedInStatus();
-  }, []);
+  }, [isPremium]);
 
   return (
-    <AuthContext.Provider value={{ balance, setBalance, isLoggedIn, isPremium, setIsPremium, setIsLoggedIn, userRole, setUserRole }}>
+    <AuthContext.Provider value={{ isLoggedIn, isPremium, setIsPremium, setIsLoggedIn, userRole, setUserRole }}>
       {children}
     </AuthContext.Provider>
   );

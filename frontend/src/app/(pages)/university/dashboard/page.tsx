@@ -30,7 +30,6 @@ type User = {
   subscription: string;
   walletAddress: string;
   dob: string;
-  balance: number
 };
 
 type University = {
@@ -74,7 +73,8 @@ const InstitutesDashboard: React.FC = () => {
   const [universities, setUniversities] = useState<University[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  // Changed: Use object to track loading state for each certificate
+  const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({});
   const [stats, setStats] = useState<Stats>({
     totalInstitutes: 0,
     totalCertificates: 0,
@@ -130,7 +130,9 @@ const InstitutesDashboard: React.FC = () => {
   };
 
   const handleRevokeCertificate = async (certificateId: string, studentWallet: string) => {
-    setLoading(true);
+    // Set loading state for this specific certificate
+    setLoadingStates(prev => ({ ...prev, [certificateId]: true }));
+
     try {
       await contractInstance?.revokeDegree(studentWallet, certificateId);
 
@@ -148,12 +150,17 @@ const InstitutesDashboard: React.FC = () => {
         revokedCertificates: prev.revokedCertificates + 1
       }));
 
-      alert("Certificate revoked successfully!");
+      toast.success("Certificate revoked successfully!");
     } catch (error) {
       console.error("Revoke failed:", error);
-      alert("Failed to revoke certificate");
+      toast.error("Failed to revoke certificate");
     } finally {
-      setLoading(false);
+      // Remove loading state for this specific certificate
+      setLoadingStates(prev => {
+        const newState = { ...prev };
+        delete newState[certificateId];
+        return newState;
+      });
     }
   };
 
@@ -185,6 +192,7 @@ const InstitutesDashboard: React.FC = () => {
       day: "numeric"
     });
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white relative overflow-hidden">
       {/* Background Pattern */}
@@ -275,12 +283,6 @@ const InstitutesDashboard: React.FC = () => {
               <p className="text-gray-400 text-sm">Role</p>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/30">
                 {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Unknown'}
-
-              </span>
-              <p className="text-gray-400 text-sm">Wallet Balance</p>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-600/20 text-blue-300 border border-blue-500/30">
-                ₹ {user?.balance}
-
               </span>
             </div>
 
@@ -453,10 +455,10 @@ const InstitutesDashboard: React.FC = () => {
                       {certificate.isValid && (
                         <button
                           onClick={() => handleRevokeCertificate(certificate.certificateId, certificate.studentWallet)}
-                          disabled={loading}
+                          disabled={loadingStates[certificate.certificateId] || false}
                           className="flex items-center space-x-2 bg-red-600/20 hover:bg-red-600/30 px-4 py-2 rounded-lg transition-all duration-200 text-red-300 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {loading ? (
+                          {loadingStates[certificate.certificateId] ? (
                             <>
                               <Clock className="w-4 h-4 animate-spin" />
                               <span>Revoking...</span>

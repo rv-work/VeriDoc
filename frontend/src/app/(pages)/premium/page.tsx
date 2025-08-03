@@ -65,8 +65,7 @@ const handleStripePayment = async (planName: string, amount: number): Promise<vo
       cancelUrl: "http://localhost:3000/payment/cancel",
     }),
     credentials: 'include',
-  }
-  );
+  });
 
   if (!response.ok) {
     throw new Error('Failed to create checkout session');
@@ -83,14 +82,11 @@ const handleStripePayment = async (planName: string, amount: number): Promise<vo
   if (result?.error) {
     console.error(result.error.message);
   }
-
 }
 
-
-
-
 const Premium: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(false);
+  // Updated loading state to track individual buttons
+  const [loadingStates, setLoadingStates] = useState<{ [key: string]: boolean }>({});
 
   const payPerUseOptions: PayPerUseOption[] = [
     {
@@ -128,9 +124,9 @@ const Premium: React.FC = () => {
     {
       name: "Basic",
       description: "Perfect for small institutions getting started",
-      price: "₹2,999",
-      priceNumber: 2999,
-      billingCycle: "/month",
+      price: "₹14,999",
+      priceNumber: 14999,
+      billingCycle: "/6 months",
       icon: <Shield className="w-8 h-8" />,
       features: [
         "Up to 100 certificate uploads/month",
@@ -138,17 +134,18 @@ const Premium: React.FC = () => {
         "Basic QR code generation",
         "Standard support",
         "Basic analytics dashboard",
-        "Mobile-friendly interface"
+        "Mobile-friendly interface",
+        "6 months validity"
       ],
       buttonText: "Start Basic Plan",
-      buttonStyle: "border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+      buttonStyle: "border-2 cursor-pointer border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
     },
     {
       name: "Premium",
       description: "Most popular choice for growing universities",
-      price: "₹7,999",
-      priceNumber: 7999,
-      billingCycle: "/month",
+      price: "₹79,999",
+      priceNumber: 79999,
+      billingCycle: "/year",
       icon: <Star className="w-8 h-8" />,
       features: [
         "Up to 500 certificate uploads/month",
@@ -158,18 +155,19 @@ const Premium: React.FC = () => {
         "Advanced analytics & insights",
         "Custom branding options",
         "API access",
-        "Bulk upload capabilities"
+        "Bulk upload capabilities",
+        "1 year validity"
       ],
       popular: true,
-      buttonText: "Choose Pro Plan",
-      buttonStyle: "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+      buttonText: "Choose Premium Plan",
+      buttonStyle: "bg-gradient-to-r from-blue-600 to-purple-600 cursor-pointer text-white hover:from-blue-700 hover:to-purple-700"
     },
     {
       name: "Enterprise",
       description: "Comprehensive solution for large institutions",
-      price: "₹19,999",
-      priceNumber: 19999,
-      billingCycle: "/month",
+      price: "₹15,99,999",
+      priceNumber: 1599999,
+      billingCycle: "/10 years",
       icon: <Crown className="w-8 h-8" />,
       features: [
         "Unlimited certificate uploads",
@@ -180,10 +178,11 @@ const Premium: React.FC = () => {
         "Custom integrations",
         "Multi-admin dashboard",
         "SLA guarantee",
-        "Custom training sessions"
+        "Custom training sessions",
+        "10 years validity"
       ],
       buttonText: "Contact Sales",
-      buttonStyle: "bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+      buttonStyle: "bg-gradient-to-r from-purple-600 to-pink-600 cursor-pointer text-white hover:from-purple-700 hover:to-pink-700"
     }
   ];
 
@@ -220,15 +219,17 @@ const Premium: React.FC = () => {
     }
   ];
 
+  // Updated function to handle individual loading states
   const handlePlanSelection = async (planName: string, amount: number): Promise<void> => {
+    const planKey = `${planName}_${amount}`;
 
-    setLoading(true);
+    setLoadingStates(prev => ({ ...prev, [planKey]: true }));
     try {
       await handleStripePayment(planName.toLowerCase(), amount);
     } catch (error) {
       console.error('Plan selection error:', error);
     } finally {
-      setLoading(false);
+      setLoadingStates(prev => ({ ...prev, [planKey]: false }));
     }
   };
 
@@ -260,7 +261,7 @@ const Premium: React.FC = () => {
 
             <p className="text-xl text-gray-300 max-w-3xl mx-auto mb-8">
               Secure, verify, and manage academic credentials with blockchain technology.
-              Pay only for what you use or choose a plan that grows with you.
+              Pay only for what you use or choose a long-term plan that grows with you.
             </p>
 
             <div className="flex justify-center items-center space-x-4 text-sm">
@@ -343,10 +344,10 @@ const Premium: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Subscription Plans
+              Long-Term Plans
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Choose a plan that scales with your institution. Save more with annual billing.
+              Choose a plan that scales with your institution. Get better value with longer commitments.
             </p>
           </div>
 
@@ -383,9 +384,19 @@ const Premium: React.FC = () => {
                     <span className="text-gray-600 ml-1">{plan.billingCycle}</span>
                   </div>
 
-                  {plan.name !== 'Enterprise' && (
+                  {plan.name === 'Basic' && (
                     <p className="text-sm text-green-600 font-semibold">
-                      Save 20% with annual billing
+                      Best value for 6 months
+                    </p>
+                  )}
+                  {plan.name === 'Premium' && (
+                    <p className="text-sm text-green-600 font-semibold">
+                      Save 30% compared to monthly
+                    </p>
+                  )}
+                  {plan.name === 'Enterprise' && (
+                    <p className="text-sm text-purple-600 font-semibold">
+                      Ultimate long-term value
                     </p>
                   )}
                 </div>
@@ -399,13 +410,14 @@ const Premium: React.FC = () => {
                   ))}
                 </ul>
 
+                {/* Updated button with individual loading state */}
                 <button
                   onClick={() => handlePlanSelection(plan.name, plan.priceNumber)}
-                  disabled={loading}
+                  disabled={loadingStates[`${plan.name}_${plan.priceNumber}`]}
                   className={`w-full py-4 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${plan.buttonStyle}`}
                 >
                   <span>
-                    {loading ? 'Processing...' : plan.buttonText}
+                    {loadingStates[`${plan.name}_${plan.priceNumber}`] ? 'Processing...' : plan.buttonText}
                   </span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
@@ -455,11 +467,15 @@ const Premium: React.FC = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            {/* Updated CTA button with individual loading state */}
             <button
-              onClick={() => handlePlanSelection('Free Trial', 0)}
-              className="bg-white text-blue-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-2"
+              onClick={() => handlePlanSelection('Basic', 14999)}
+              disabled={loadingStates['Basic_14999']}
+              className="bg-white text-blue-900 px-8 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Start Free Trial</span>
+              <span>
+                {loadingStates['Basic_14999'] ? 'Processing...' : 'Start with Basic'}
+              </span>
               <ArrowRight className="w-5 h-5" />
             </button>
             <button
@@ -471,7 +487,7 @@ const Premium: React.FC = () => {
           </div>
 
           <p className="text-gray-400 mt-6 text-sm">
-            No credit card required • Setup in minutes • 30-day money-back guarantee
+            No credit card required • Setup in minutes • Long-term plans available
           </p>
         </div>
       </div>

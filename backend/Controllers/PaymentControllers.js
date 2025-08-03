@@ -3,8 +3,9 @@ import { prisma } from '../Utils/prisma.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
+
 export const CreateOrder = async (req, res) => {
-   try {
+  try {
     const {
       planName,
       amount,
@@ -22,16 +23,15 @@ export const CreateOrder = async (req, res) => {
               name: `VeriDoc ${planName} Plan`,
               description: `One-time payment for ${planName} plan`,
             },
-            unit_amount: amount * 1000, 
+            unit_amount: amount * 100, 
           },
           quantity: 1,
         },
-       
-        
       ],
-      mode:  'payment',
+      mode: 'payment',
       success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&planName=${planName}`,
-      cancel_url: cancelUrl,
+      cancel_url: `${cancelUrl}?status=cancelled`,
+      expires_at: Math.floor(Date.now() / 1000) + (30 * 60), 
     });
 
     res.json({ id: session.id });
@@ -40,44 +40,99 @@ export const CreateOrder = async (req, res) => {
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }
+export const VerifySession = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
 
-export const ConfirmPayment = async (req, res) => {
+    if (!sessionId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Session ID is required' 
+      });
+    }
 
-  const { sessionId , planName  , purpose} = req.body;
-  const userId = req.user.id;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-  if (session.payment_status === 'paid') {
-
-    console.log("Confirmed payment for session", session.id);
-
-
-    if(purpose === "subscription") {
-       await prisma.user.update({
-         where: { id: userId },
-         data: {
-           subscription:planName, 
-           expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) 
-         }
-       });
-    } else {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          balance: {
-            increment: 250 * 100
-          }
-        }
+    if (!session) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Session not found' 
       });
     }
 
 
-    return res.status(200).json({ success: true });
-  } else {
-    return res.status(400).json({ success: false ,  error: 'Payment not successful' });
+      res.json({
+      success: true,
+      paymentStatus: session.payment_status,
+      sessionStatus: session.status,
+      planName: session.metadata?.planName,
+      amount: session.metadata?.amount,
+      customerEmail: session.customer_details?.email,
+      paymentIntentId: session.payment_intent,
+    });
+
+    
+
+  } catch (error) {
+    console.error('Error verifying payment session:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to verify payment session' 
+    });
   }
 };
+
+
+export const ConfirmPayment = async (req, res) => {
+  const { sessionId, planName } = req.body;
+
+  const userId = req.user.id;
+
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+
+  if (session.payment_status === 'paid') {
+
+    console.log("Confirmed payment for session", session.id);
+    console.log("plan name : " , planName)
+
+    if (planName === "basic") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscription: planName,
+          expiryDate: new Date(Date.now() + 6 * 30 * 24 * 60 * 60 * 1000) // 6 months
+        }
+      });
+    } else if (planName === "premium") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscription: planName,
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year
+        }
+      });
+    } else if (planName === "enterprise") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscription: planName,
+          expiryDate: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000) // 10 years
+        }
+      });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+   console.log("user after cnf : " , user)
+
+    return res.status(200).json({ success: true });
+  } else {
+    return res.status(400).json({ success: false, error: 'Payment not successful' });
+  }
+};
+
 
 
 
@@ -90,43 +145,3 @@ export const VerifyPayment = async (req, res) => {
     res.status(400).json({success : true, message: "Payment verified successfully" });
   }
 };
-
-
-
-export const UseMoney = async (req, res) => {
-  try {
-    const user = req.user;
-    console.log("called")
-    
-    console.log("balance : " , user)
-
-
-    if (!user || typeof user.balance !== 'number') {
-      return res.status(400).json({ success: false, error: 'Invalid user data' });
-    }
-
-    console.log("balance : " , user)
-
-    if (user.balance < 100) {
-      return res.status(200).json({ success: false, error: 'Insufficient balance' });
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        balance: {
-          decrement: 250 * 100,
-        },
-      },
-    });
-
-    return res.status(200).json({ success: true });
-  } catch (error) {
-    console.error("UseMoney Error:", error);
-    return res.status(500).json({ success: false, error: 'Internal server error' });
-  }
-};
-
-
-
-

@@ -19,7 +19,6 @@ model User {
   subscription  Plan         @default(free)
   expiryDate    DateTime?
   institutes    University[]
-  balance       Int          @default(0)
 }
 
 model University {

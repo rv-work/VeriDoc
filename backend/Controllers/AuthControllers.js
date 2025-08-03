@@ -30,7 +30,7 @@ export const Signup = async (req, res) => {
       },
     });
 
-    const token = jwt.sign({ id: user.id, Iam: user.role  , isPremium : user.subscription !== 'free' , balance : 0}, 'secretkey', {
+    const token = jwt.sign({ id: user.id, Iam: user.role  , isPremium : user.subscription !== 'free'}, 'secretkey', {
       expiresIn: '7d',
     });
 
@@ -41,7 +41,7 @@ export const Signup = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(201).json({ success: true, msg: 'User registered successfully', userRole : user.role , isPremium : user.subscription !== 'free' , balance : user.balance  });
+    res.status(201).json({ success: true, msg: 'User registered successfully', userRole : user.role , isPremium : user.subscription !== 'free'  });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -62,7 +62,7 @@ export const Login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ msg: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user.id, Iam: user.role , isPremium : (user.subscription !== 'free') , balance : user.balance }, 'secretkey', {
+    const token = jwt.sign({ id: user.id, Iam: user.role , isPremium : (user.subscription !== 'free') }, 'secretkey', {
       expiresIn: '7d',
     });
 
@@ -74,11 +74,9 @@ export const Login = async (req, res) => {
     });
 
 
-    console.log("user : " , user)
 
 
-
-    res.status(200).json({ success: true, msg: 'Login successful', userRole : user.role , isPremium : (user.subscription !== 'free') , balance : user.balance });
+    res.status(200).json({ success: true, msg: 'Login successful', userRole : user.role , isPremium : (user.subscription !== 'free')  });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -95,8 +93,7 @@ export const CheckAuth = async (req, res) => {
       where : {id : decoded.id}
     })
 
-
-    res.json({ success: true  , userRole : user.role , isPremium : (user.subscription !== 'free') , balance : user.balance });
+    res.json({ success: true  , userRole : user.role , isPremium : (user.subscription !== 'free') });
 
 
   } catch (err) {
@@ -121,7 +118,6 @@ export const Logout = async (req, res) => {
 };
 
 export const Metamask = async (req, res) => {
-  console.log("inside metamask controller");
   const VERIFY_MESSAGE = "Please sign this message to verify ownership of your wallet.";
   const { address, signature } = req.body;
 
@@ -134,11 +130,13 @@ export const Metamask = async (req, res) => {
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return res.status(403).json({ error: "Signature does not match address" });
     }
-
+    
   
     const user = await prisma.user.findUnique({
       where: { walletAddress: recoveredAddress }, 
     });
+
+
 
     if(!user) {
       return res.status(403).json({ success : false ,  message: "address is not assosiated with any account " });

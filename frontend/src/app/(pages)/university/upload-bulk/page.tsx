@@ -85,6 +85,7 @@ const BulkUploadCertificate: React.FC = () => {
     parseCsvFile(file);
   };
 
+
   const parseCsvFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -99,7 +100,6 @@ const BulkUploadCertificate: React.FC = () => {
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const requiredHeaders = ['studentaddress', 'studentname', 'course', 'rollno', 'issuedate'];
 
-      // Check if filename column exists for CSV+ZIP method
       const hasFilename = headers.includes('filename');
       if (csvUploadMethod === 'csv-zip' && !hasFilename) {
         toast.error('CSV+ZIP method requires "filename" column in CSV');
@@ -116,10 +116,12 @@ const BulkUploadCertificate: React.FC = () => {
       const newErrors: string[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
+        // Better CSV parsing - handle quoted values
+        const values = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+        const cleanValues = values.map(v => v.replace(/^"|"$/g, '').trim());
 
-        if (values.length !== headers.length) {
-          newErrors.push(`Row ${i + 1}: Column count mismatch`);
+        if (cleanValues.length < requiredHeaders.length) {
+          newErrors.push(`Row ${i + 1}: Insufficient data columns`);
           continue;
         }
 
@@ -134,30 +136,45 @@ const BulkUploadCertificate: React.FC = () => {
         };
 
         headers.forEach((header, index) => {
-          switch (header) {
-            case 'studentaddress':
-              cert.studentAddress = values[index];
-              break;
-            case 'studentname':
-              cert.studentName = values[index];
-              break;
-            case 'course':
-              cert.course = values[index];
-              break;
-            case 'rollno':
-              cert.rollNo = values[index];
-              break;
-            case 'issuedate':
-              cert.issueDate = values[index];
-              break;
-            case 'filename':
-              cert.filename = values[index];
-              break;
+          if (index < cleanValues.length) {
+            switch (header) {
+              case 'studentaddress':
+                cert.studentAddress = cleanValues[index];
+                break;
+              case 'studentname':
+                cert.studentName = cleanValues[index];
+                break;
+              case 'course':
+                cert.course = cleanValues[index];
+                break;
+              case 'rollno':
+                cert.rollNo = cleanValues[index];
+                break;
+              case 'issuedate':
+                cert.issueDate = cleanValues[index];
+                break;
+              case 'filename':
+                cert.filename = cleanValues[index];
+                break;
+            }
           }
         });
 
+        // Validate required fields
         if (!cert.studentAddress || !cert.studentName || !cert.course || !cert.rollNo || !cert.issueDate) {
-          newErrors.push(`Row ${i + 1}: Missing required data`);
+          newErrors.push(`Row ${i + 1}: Missing required data - Address: ${cert.studentAddress ? '✓' : '✗'}, Name: ${cert.studentName ? '✓' : '✗'}, Course: ${cert.course ? '✓' : '✗'}, Roll: ${cert.rollNo ? '✓' : '✗'}, Date: ${cert.issueDate ? '✓' : '✗'}`);
+          continue;
+        }
+
+        // Validate Ethereum address format
+        if (!cert.studentAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+          newErrors.push(`Row ${i + 1}: Invalid Ethereum address format`);
+          continue;
+        }
+
+        // Validate date format
+        if (!cert.issueDate.match(/^\d{2}-\d{2}-\d{4}$/)) {
+          newErrors.push(`Row ${i + 1}: Invalid date format (use YYYY-MM-DD)`);
           continue;
         }
 
@@ -166,24 +183,34 @@ const BulkUploadCertificate: React.FC = () => {
 
       let finalCertificates = newCertificates;
 
+      // Match files with CSV data if using CSV+ZIP method and files are already extracted
       if (csvUploadMethod === 'csv-zip' && Object.keys(extractedFiles).length > 0) {
         finalCertificates = matchFilesWithCsv(newCertificates, extractedFiles);
+        console.log("Files matched with CSV data during CSV parsing:", finalCertificates);
       }
 
+      console.log("certs : ", finalCertificates)
       setCertificates(finalCertificates);
       setErrors(newErrors);
       setShowPreview(true);
 
       if (finalCertificates.length > 0) {
-        toast.success(`Loaded ${finalCertificates.length} certificates`);
+        const filesMatchedText = csvUploadMethod === 'csv-zip' && Object.keys(extractedFiles).length > 0
+          ? ' and matched with ZIP files'
+          : '';
+        toast.success(`Loaded ${finalCertificates.length} certificates${filesMatchedText}${newErrors.length > 0 ? ` (${newErrors.length} errors)` : ''}`);
       }
     };
 
     reader.readAsText(file);
   };
 
+
+  // Fix for the extractZipFile function to properly set MIME types
+
   const extractZipFile = async (zipFile: File): Promise<{ [key: string]: File }> => {
     try {
+      console.log("zip file : ", zipFile)
       const zip = new JSZip();
       const contents = await zip.loadAsync(zipFile);
       const extractedFiles: { [key: string]: File } = {};
@@ -191,17 +218,92 @@ const BulkUploadCertificate: React.FC = () => {
       for (const [filename, fileData] of Object.entries(contents.files)) {
         if (!fileData.dir && (filename.endsWith('.pdf') || filename.endsWith('.png') || filename.endsWith('.jpg') || filename.endsWith('.jpeg'))) {
           const blob = await fileData.async('blob');
-          const file = new File([blob], filename, { type: blob.type });
+
+          // Fix: Determine proper MIME type based on file extension
+          let mimeType = '';
+          const extension = filename.toLowerCase().split('.').pop();
+
+          switch (extension) {
+            case 'pdf':
+              mimeType = 'application/pdf';
+              break;
+            case 'png':
+              mimeType = 'image/png';
+              break;
+            case 'jpg':
+            case 'jpeg':
+              mimeType = 'image/jpeg';
+              break;
+            default:
+              mimeType = blob.type || 'application/octet-stream';
+          }
+
+          // Create new File with proper MIME type
+          const file = new File([blob], filename, {
+            type: mimeType,
+            lastModified: Date.now()
+          });
+
           extractedFiles[filename] = file;
+          console.log(`Extracted file: ${filename}, type: ${file.type}, size: ${file.size}`);
         }
       }
 
+      console.log("extracted files : ", extractedFiles)
       return extractedFiles;
     } catch (error) {
       console.error('Error extracting ZIP file:', error);
       toast.error('Failed to extract ZIP file');
       return {};
     }
+  };
+
+  // Also update the handleFileUpload function to be more robust
+  const handleFileUpload = (index: number, file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size should be less than 10MB');
+      return;
+    }
+
+    // More robust file type checking - check both MIME type and extension
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.pdf'];
+
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidMimeType = allowedTypes.includes(file.type);
+
+    // Accept file if either MIME type is valid OR extension is valid (to handle ZIP extracted files)
+    if (!hasValidMimeType && !hasValidExtension) {
+      toast.error('Only PNG, JPG, and PDF files are allowed');
+      return;
+    }
+
+    // If MIME type is missing but extension is valid, try to set proper MIME type
+    let processedFile = file;
+    if (!file.type && hasValidExtension) {
+      let mimeType = '';
+      if (fileName.endsWith('.pdf')) {
+        mimeType = 'application/pdf';
+      } else if (fileName.endsWith('.png')) {
+        mimeType = 'image/png';
+      } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+        mimeType = 'image/jpeg';
+      }
+
+      if (mimeType) {
+        processedFile = new File([file], file.name, {
+          type: mimeType,
+          lastModified: file.lastModified
+        });
+      }
+    }
+
+    const updated = [...certificates];
+    updated[index] = { ...updated[index], file: processedFile };
+    setCertificates(updated);
+
+    console.log(`File attached: ${processedFile.name}, type: ${processedFile.type}`);
   };
 
   const handleZipUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -219,9 +321,20 @@ const BulkUploadCertificate: React.FC = () => {
     }
 
     setZipFile(file);
+
     const extracted = await extractZipFile(file);
+    console.log("ext : ", extracted)
     setExtractedFiles(extracted);
-    toast.success(`Extracted ${Object.keys(extracted).length} files from ZIP`);
+
+    // Agar CSV already loaded hai aur certificates exist karte hain, to match karo files
+    if (certificates.length > 0 && csvUploadMethod === 'csv-zip') {
+      const matchedCertificates = matchFilesWithCsv(certificates, extracted);
+      setCertificates(matchedCertificates);
+      console.log("Files matched with existing CSV data:", matchedCertificates);
+      toast.success(`Extracted ${Object.keys(extracted).length} files and matched with CSV data`);
+    } else {
+      toast.success(`Extracted ${Object.keys(extracted).length} files from ZIP`);
+    }
   };
 
   const matchFilesWithCsv = (certificates: CertificateData[], extractedFiles: { [key: string]: File }): CertificateData[] => {
@@ -267,33 +380,56 @@ const BulkUploadCertificate: React.FC = () => {
     setCertificates(updated);
   };
 
-  const handleFileUpload = (index: number, file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size should be less than 10MB');
-      return;
-    }
 
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error('Only PNG, JPG, and PDF files are allowed');
-      return;
-    }
-
-    const updated = [...certificates];
-    updated[index] = { ...updated[index], file };
-    setCertificates(updated);
-  };
 
   const validateCertificates = (): boolean => {
     const newErrors: string[] = [];
 
+    if (certificates.length === 0) {
+      newErrors.push('No certificates to upload');
+      setErrors(newErrors);
+      return false;
+    }
+
     certificates.forEach((cert, index) => {
-      if (!cert.studentAddress) newErrors.push(`Certificate ${index + 1}: Missing student address`);
-      if (!cert.studentName) newErrors.push(`Certificate ${index + 1}: Missing student name`);
-      if (!cert.course) newErrors.push(`Certificate ${index + 1}: Missing course`);
-      if (!cert.rollNo) newErrors.push(`Certificate ${index + 1}: Missing roll number`);
-      if (!cert.issueDate) newErrors.push(`Certificate ${index + 1}: Missing issue date`);
+      const certNum = index + 1;
+
+      if (!cert.studentAddress) {
+        newErrors.push(`Certificate ${certNum}: Missing student address`);
+      } else if (!cert.studentAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        newErrors.push(`Certificate ${certNum}: Invalid Ethereum address format`);
+      }
+
+      if (!cert.studentName.trim()) {
+        newErrors.push(`Certificate ${certNum}: Missing student name`);
+      }
+
+      if (!cert.course.trim()) {
+        newErrors.push(`Certificate ${certNum}: Missing course`);
+      }
+
+      if (!cert.rollNo.trim()) {
+        newErrors.push(`Certificate ${certNum}: Missing roll number`);
+      }
+
+      if (!cert.issueDate) {
+        newErrors.push(`Certificate ${certNum}: Missing issue date`);
+      } else if (!cert.issueDate.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        newErrors.push(`Certificate ${certNum}: Invalid date format (use YYYY-MM-DD)`);
+      }
     });
+
+    const certIds = certificates.map(cert => cert.certificateId);
+    const duplicates = certIds.filter((id, index) => certIds.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+      newErrors.push(`Duplicate certificate IDs found: ${duplicates.join(', ')}`);
+    }
+
+    const rollNos = certificates.map(cert => cert.rollNo).filter(rn => rn.trim());
+    const duplicateRolls = rollNos.filter((roll, index) => rollNos.indexOf(roll) !== index);
+    if (duplicateRolls.length > 0) {
+      newErrors.push(`Duplicate roll numbers found: ${duplicateRolls.join(', ')}`);
+    }
 
     setErrors(newErrors);
     return newErrors.length === 0;
@@ -301,24 +437,39 @@ const BulkUploadCertificate: React.FC = () => {
 
   const uploadFilesToIPFS = async (): Promise<CertificateData[]> => {
     const updatedCertificates = [...certificates];
+    let uploadCount = 0;
+    console.log("in")
 
     for (let i = 0; i < updatedCertificates.length; i++) {
+
       if (updatedCertificates[i].file) {
+        console.log("inloop in if", updatedCertificates[i].file)
+        uploadCount++;
         setProgress(prev => ({
           ...prev,
-          currentStep: `Uploading file ${i + 1} to IPFS...`
+          current: uploadCount,
+          currentStep: `Uploading file ${uploadCount} of ${updatedCertificates.filter(c => c.file).length} to IPFS...`
         }));
 
         try {
           const ipfsHash = await UploadToIPFS(updatedCertificates[i].file!);
-          updatedCertificates[i].ipfsHash = ipfsHash || '';
+          console.log("ipfs got : ", ipfsHash)
+          if (ipfsHash.length != 0) {
+            updatedCertificates[i].ipfsHash = ipfsHash;
+            console.log(`Uploaded file ${i + 1}: ${ipfsHash}`);
+          } else {
+            toast.error("IPFS not ")
+          }
         } catch (error) {
           console.error(`Failed to upload file for certificate ${i + 1}:`, error);
-          updatedCertificates[i].ipfsHash = '';
+          throw new Error(`Failed to upload file for ${updatedCertificates[i].studentName}: ${error}`);
         }
       }
     }
 
+    setCertificates(updatedCertificates);
+    console.log("updated  :", updatedCertificates)
+    console.log("updated cer  :", certificates)
     return updatedCertificates;
   };
 
@@ -329,7 +480,7 @@ const BulkUploadCertificate: React.FC = () => {
     }
 
     if (!isPremium) {
-      toast.error("Upgrade To Premium")
+      toast.error("Upgrade To Premium");
       return;
     }
 
@@ -340,8 +491,10 @@ const BulkUploadCertificate: React.FC = () => {
 
     try {
       setLoading(true);
+
+      const totalFiles = certificates.filter(cert => cert.file).length;
       setProgress({
-        total: certificates.length,
+        total: totalFiles > 0 ? totalFiles : certificates.length,
         current: 0,
         status: 'uploading',
         currentStep: 'Starting bulk upload process...'
@@ -352,10 +505,9 @@ const BulkUploadCertificate: React.FC = () => {
       setProgress(prev => ({
         ...prev,
         status: 'processing',
-        currentStep: 'Submitting to blockchain...'
+        current: prev.total,
+        currentStep: 'Preparing blockchain transaction...'
       }));
-
-
 
       const inputs = updatedCertificates.map(cert => ({
         student: cert.studentAddress,
@@ -364,11 +516,17 @@ const BulkUploadCertificate: React.FC = () => {
         course: cert.course,
         rollNo: cert.rollNo,
         issueDate: cert.issueDate,
-        ipfsHash: cert.ipfsHash
+        ipfsHash: cert.ipfsHash || ''
+      }));
+
+      console.log('Submitting to blockchain:', inputs);
+
+      setProgress(prev => ({
+        ...prev,
+        currentStep: 'Submitting to blockchain...'
       }));
 
       const tx = await contractInstance.issueDegreesBulk(inputs);
-
 
       setProgress(prev => ({
         ...prev,
@@ -386,8 +544,11 @@ const BulkUploadCertificate: React.FC = () => {
 
       toast.success(`Successfully issued ${certificates.length} certificates!`);
 
+      // Clear everything
       setCertificates([]);
       setCsvFile(null);
+      setZipFile(null);
+      setExtractedFiles({});
       setShowPreview(false);
       setErrors([]);
       if (fileInputRef.current) {
@@ -395,7 +556,7 @@ const BulkUploadCertificate: React.FC = () => {
       }
 
     } catch (err: unknown) {
-      console.error(err);
+      console.error('Bulk upload error:', err);
       setProgress(prev => ({ ...prev, status: 'error' }));
 
       if (typeof err === 'object' && err !== null) {
@@ -1050,7 +1211,7 @@ const BulkUploadCertificate: React.FC = () => {
                     fileInputRef.current.value = '';
                   }
                 }}
-                className="flex-1 px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                className="flex-1 cursor-pointer px-6 py-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                 disabled={loading}
               >
                 Clear All
@@ -1060,7 +1221,7 @@ const BulkUploadCertificate: React.FC = () => {
                 type="button"
                 onClick={handleBulkSubmit}
                 disabled={loading || certificates.length === 0 || errors.length > 0}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
+                className="flex-1 cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
               >
                 {loading ? (
                   <>

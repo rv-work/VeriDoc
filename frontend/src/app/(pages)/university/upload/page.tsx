@@ -13,7 +13,8 @@ import {
   Wallet,
   CheckCircle,
   AlertCircle,
-  Loader
+  Loader,
+  CreditCard
 } from 'lucide-react';
 import { useWeb3 } from '@/app/context/Web3Context';
 import { UploadToIPFS } from '@/app/utils/uploadToIPFS';
@@ -32,6 +33,14 @@ interface FormData {
   ipfsHash: string;
 }
 
+interface StoredData {
+  formData: FormData;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+  fileDataUrl?: string; // Store file as base64 data URL
+}
+
 interface InputField {
   name: keyof FormData;
   label: string;
@@ -41,7 +50,6 @@ interface InputField {
 }
 
 const UploadPageContent: React.FC = () => {
-
   const [formData, setFormData] = useState<FormData>({
     studentAddress: '',
     certificateId: '',
@@ -52,21 +60,7 @@ const UploadPageContent: React.FC = () => {
     ipfsHash: '',
   });
 
-  useEffect(() => {
-    const storedItem = localStorage.getItem("certificateData");
-
-    if (storedItem) {
-      const parsed = JSON.parse(storedItem);
-      setFormData(parsed);
-    }
-  }, []);
-
-
-
-
-
-  const { isPremium, balance } = useAuth()
-
+  const { isPremium } = useAuth();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
 
@@ -74,12 +68,125 @@ const UploadPageContent: React.FC = () => {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [file, setFile] = useState<File | null>(null);
   const [uploadingToPinata, setUploadingToPinata] = useState<boolean>(false);
+  const [processingPayment, setProcessingPayment] = useState<boolean>(false);
+  const [dataLoaded, setDataLoaded] = useState<boolean>(false);
+  const [connectingWallet, setConnectingWallet] = useState<boolean>(false);
+  const [paymentProcessed, setPaymentProcessed] = useState<boolean>(false);
 
+  const { contractInstance, address, connectWallet } = useWeb3();
 
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
+  // Convert data URL back to File object
+  const dataUrlToFile = (dataUrl: string, fileName: string, fileType: string): File => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || fileType;
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  };
 
+  // Load data from localStorage first (including file)
+  useEffect(() => {
+    const loadStoredData = async () => {
+      try {
+        const storedItem = localStorage.getItem("certificateData");
+        if (storedItem) {
+          const parsed: StoredData = JSON.parse(storedItem);
 
-  const { contractInstance, address } = useWeb3()
+          // Load form data
+          setFormData(parsed.formData);
+
+          // Restore file if it exists
+          if (parsed.fileName && parsed.fileDataUrl && parsed.fileType) {
+            const restoredFile = dataUrlToFile(parsed.fileDataUrl, parsed.fileName, parsed.fileType);
+            setFile(restoredFile);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading stored certificate data:', error);
+        // Clear corrupted data
+        localStorage.removeItem("certificateData");
+      } finally {
+        setDataLoaded(true);
+      }
+    };
+
+    loadStoredData();
+  }, []);
+
+  // Handle payment result only after data is loaded
+  useEffect(() => {
+    const handlePaymentResult = async () => {
+      // Wait for data to be loaded before processing payment result
+      if (!dataLoaded || !sessionId || paymentProcessed) return;
+
+      setProcessingPayment(true);
+      setPaymentProcessed(true); // Prevent multiple processing
+
+      try {
+        const response = await fetch('http://localhost:5000/api/payment/verify-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sessionId }),
+          credentials: 'include',
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.paymentStatus === 'paid') {
+          toast.success('Payment successful! Connecting wallet and starting upload...');
+
+          // Connect wallet first if not connected
+          if (!address) {
+            setConnectingWallet(true);
+            try {
+              await connectWallet();
+              toast.success('Wallet connected successfully!');
+            } catch (error) {
+              toast.error('Failed to connect wallet. Please connect manually.');
+              console.log("error : ", error)
+              setProcessingPayment(false);
+              return;
+            } finally {
+              setConnectingWallet(false);
+            }
+          }
+
+          // Wait a moment for wallet connection to settle
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          // Start upload process
+          await startUploadProcess();
+        } else {
+          toast.error('Payment failed or cancelled. Please try again.');
+        }
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        toast.error('Payment verification failed. Please try again.');
+      } finally {
+        setProcessingPayment(false);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+
+    handlePaymentResult();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, dataLoaded, address]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -104,29 +211,23 @@ const UploadPageContent: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-
-
-
   const generateCertificateId = (): string => {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substring(2, 8);
     return `CERT-${new Date().getFullYear()}-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
   };
 
-
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-
-
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       if (selectedFile.size > 10 * 1024 * 1024) {
-        alert('File size should be less than 10MB');
+        toast.error('File size should be less than 10MB');
         return;
       }
 
       const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
       if (!allowedTypes.includes(selectedFile.type)) {
-        alert('Only PNG, JPG, and PDF files are allowed');
+        toast.error('Only PNG, JPG, and PDF files are allowed');
         return;
       }
 
@@ -134,142 +235,127 @@ const UploadPageContent: React.FC = () => {
     }
   };
 
+  const saveDataToLocalStorage = async (currentFormData: FormData, currentFile: File | null) => {
+    try {
+      const dataToStore: StoredData = {
+        formData: currentFormData,
+      };
 
-  const handleStripePayment = async (planName: string, amount: number): Promise<void> => {
-    const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ");
+      // Store file data if file exists
+      if (currentFile) {
+        dataToStore.fileName = currentFile.name;
+        dataToStore.fileSize = currentFile.size;
+        dataToStore.fileType = currentFile.type;
+        dataToStore.fileDataUrl = await fileToDataUrl(currentFile);
+      }
 
-    console.log("inside")
-
-    const response = await fetch('http://localhost:5000/api/payment/create-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        planName,
-        amount,
-        successUrl: `http://localhost:3000/university/upload`,
-        cancelUrl: "http://localhost:3000/payment/cancel",
-      }),
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to create checkout session');
-    }
-
-    const session = await response.json();
-
-
-    const result = await stripe?.redirectToCheckout({
-      sessionId: session.id,
-    });
-
-    if (result?.error) {
-      console.error(result.error.message);
+      localStorage.setItem("certificateData", JSON.stringify(dataToStore));
+    } catch (error) {
+      console.error('Error saving data to localStorage:', error);
+      toast.error('Failed to save form data');
     }
   };
 
-  useEffect(() => {
+  const handleStripePayment = async (): Promise<void> => {
+    // Save current form data and file before redirecting to payment
+    await saveDataToLocalStorage(formData, file);
 
-    const confirmPayment = async () => {
-      if (!sessionId) return;
+    const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ");
 
-      const res = await fetch('http://localhost:5000/api/payment/confirm-payment', {
+    try {
+      setProcessingPayment(true);
+
+      const response = await fetch('http://localhost:5000/api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sessionId, planName: "Pay-For-upload", purpose: "upload" }),
+        body: JSON.stringify({
+          planName: "Certificate Upload",
+          amount: 250,
+          successUrl: `${window.location.origin}/university/upload`,
+          cancelUrl: `${window.location.origin}/university/upload`,
+        }),
         credentials: 'include',
       });
 
-      const data = await res.json();
-
-
-      if (data.success) {
-        console.log('✅ Payment confirmed');
-        toast.success('Payment successful! You can now upload certificate.');
-      } else {
-        console.error('❌ Payment confirmation failed:', data.error);
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
       }
-    };
 
-    confirmPayment();
-  }, [sessionId]);
+      const session = await response.json();
 
+      const result = await stripe?.redirectToCheckout({
+        sessionId: session.id,
+      });
 
-  const makePayment = async () => {
-    const res = await fetch('http://localhost:5000/api/payment/use-money', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      console.log('✅ Payment Deducted');
-      toast.success('Payment successful! Amount Deducted from your balance.');
-    } else {
-      console.error('❌ Payment confirmation failed:', data.error);
+      if (result?.error) {
+        throw new Error(result.error.message);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      toast.error('Failed to initiate payment. Please try again.');
+      setProcessingPayment(false);
     }
   };
 
-
-
-
-
-  const checkPremium = async (): Promise<boolean> => {
-    console.log("premium L ", isPremium, " balance : ", balance)
-    if (!isPremium && balance < 250) {
-      await handleStripePayment("Pay-For-Upload", 25);
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async () => {
+  const startUploadProcess = async (): Promise<void> => {
     if (!validateForm()) {
+      toast.error('Please fill all required fields');
       return;
     }
 
     const { studentAddress, certificateId, studentName, course, rollNo, issueDate, ipfsHash } = formData;
-    localStorage.setItem("certificateData", JSON.stringify(formData));
-
 
     try {
-      const isPaid = await checkPremium();
-      if (!isPaid) return;
-
       setLoading(true);
+
+      // Get the current contract instance or connect wallet
+      let currentContract = contractInstance;
+
+      if (!address || !currentContract) {
+        toast('Connecting wallet and loading contract...');
+
+        try {
+          // connectWallet now returns the contract instance
+          currentContract = await connectWallet();
+
+          if (!currentContract) {
+            toast.error("Failed to load contract after wallet connection");
+            return;
+          }
+        } catch (error) {
+          console.error('Wallet connection error:', error);
+          toast.error(`Failed to connect wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return;
+        }
+      }
 
       let finalIpfsHash = ipfsHash;
 
       if (file) {
         try {
-          setUploadingToPinata(true)
+          setUploadingToPinata(true);
+          toast('Uploading file to IPFS...');
           finalIpfsHash = await UploadToIPFS(file) || ipfsHash;
-          setUploadingToPinata(false)
+          setUploadingToPinata(false);
           setFormData(prev => ({ ...prev, ipfsHash: finalIpfsHash }));
+          toast.success('File uploaded to IPFS successfully!');
         } catch (error: unknown) {
+          setUploadingToPinata(false);
           if (error instanceof Error) {
-            alert('Failed to upload file to IPFS: ' + error.message);
+            toast.error('Failed to upload file to IPFS: ' + error.message);
           } else {
-            alert('Failed to upload file to IPFS');
+            toast.error('Failed to upload file to IPFS');
           }
           return;
         }
       }
 
-      if (!contractInstance) {
-        toast.error('Please connect your wallet first');
-        return;
-      }
+      toast('Submitting transaction to blockchain...');
 
-      const tx = await contractInstance.issueDegree(
+      // Use the currentContract instance (not the state variable)
+      const tx = await currentContract.issueDegree(
         studentAddress,
         certificateId,
         studentName,
@@ -279,13 +365,12 @@ const UploadPageContent: React.FC = () => {
         finalIpfsHash
       );
 
-      alert('Transaction submitted. Waiting for confirmation...');
+      toast.success('Transaction submitted. Waiting for confirmation...');
       await tx.wait();
 
-      await makePayment();
+      toast.success('Certificate issued successfully!');
 
-      toast.success('Certificate issued successfully!!');
-
+      // Reset form
       setFormData({
         studentAddress: '',
         certificateId: '',
@@ -297,18 +382,35 @@ const UploadPageContent: React.FC = () => {
       });
       setFile(null);
       localStorage.removeItem("certificateData");
-
+      setPaymentProcessed(false);
 
     } catch (err: unknown) {
       console.error(err);
       if (typeof err === 'object' && err !== null) {
-        const errorObj = err as { reason?: string; message?: string };
-        alert(errorObj.reason || errorObj.message || 'Transaction failed');
+        const errorObj = err as { reason?: string; message?: string; code?: number };
+
+        if (errorObj.code === 4001) {
+          toast.error('Transaction rejected by user');
+        } else {
+          toast.error(errorObj.reason || errorObj.message || 'Transaction failed');
+        }
       } else {
-        alert('Transaction failed');
+        toast.error('Transaction failed');
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (isPremium) {
+      await startUploadProcess();
+    } else {
+      await handleStripePayment();
     }
   };
 
@@ -355,14 +457,30 @@ const UploadPageContent: React.FC = () => {
       icon: <Calendar className="w-5 h-5" />,
       type: 'date'
     },
-
   ];
+
+  if (processingPayment || connectingWallet) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            {processingPayment ? 'Processing Payment...' : 'Connecting Wallet...'}
+          </h2>
+          <p className="text-gray-600">
+            {processingPayment
+              ? 'Please wait while we verify your payment and prepare for upload.'
+              : 'Please approve the wallet connection in your wallet app.'
+            }
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-
-
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl mb-6 shadow-xl">
             <Upload className="w-10 h-10 text-white" />
@@ -375,28 +493,30 @@ const UploadPageContent: React.FC = () => {
           </p>
         </div>
 
-        {/* Main Form Container */}
         <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-
-          {/* Status Bar */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
             <div className="flex items-center justify-between text-white">
               <div className="flex items-center space-x-3">
                 <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="font-semibold">University Portal</span>
               </div>
-              {address && (
+              {address ? (
                 <div className="flex items-center space-x-2 bg-white/20 rounded-xl px-4 py-2">
                   <Wallet className="w-4 h-4" />
-                  <span className="text-sm font-mono">{address}</span>
+                  <span className="text-sm font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
                 </div>
+              ) : (
+                <button
+                  onClick={connectWallet}
+                  className="bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200"
+                >
+                  Connect Wallet
+                </button>
               )}
             </div>
           </div>
 
-          {/* Form Content */}
           <div className="p-8 space-y-8">
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {inputFields.map((field) => (
                 field.name === 'certificateId' ? (
@@ -411,7 +531,7 @@ const UploadPageContent: React.FC = () => {
                         <input
                           type={field.type}
                           name={field.name}
-                          value={formData[field.name]}
+                          value={formData?.[field.name]}
                           onChange={handleChange}
                           readOnly
                           placeholder={field.placeholder}
@@ -420,12 +540,10 @@ const UploadPageContent: React.FC = () => {
                             : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
                             }`}
                         />
-
                         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200">
                           {field.icon}
                         </div>
-
-                        {formData[field.name] && !errors[field.name] && (
+                        {formData?.[field.name] && !errors[field.name] && (
                           <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500">
                             <CheckCircle className="w-5 h-5" />
                           </div>
@@ -459,7 +577,8 @@ const UploadPageContent: React.FC = () => {
                       <input
                         type={field.type}
                         name={field.name}
-                        value={formData[field.name]}
+                        value={formData?.[field.name] || ''}
+
                         onChange={handleChange}
                         placeholder={field.placeholder}
                         className={`w-full px-4 py-4 pl-12 text-black rounded-xl border-2 transition-all duration-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${errors[field.name]
@@ -467,12 +586,10 @@ const UploadPageContent: React.FC = () => {
                           : 'border-gray-200 focus:border-blue-500 group-hover:border-gray-300'
                           }`}
                       />
-
                       <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors duration-200">
                         {field.icon}
                       </div>
-
-                      {formData[field.name] && !errors[field.name] && (
+                      {formData?.[field.name] && !errors[field.name] && (
                         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-green-500">
                           <CheckCircle className="w-5 h-5" />
                         </div>
@@ -557,6 +674,7 @@ const UploadPageContent: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-4 pt-6">
               <button
                 type="button"
+                onClick={() => saveDataToLocalStorage(formData, file)}
                 className="flex-1 px-6 py-4 border-2 cursor-pointer border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
               >
                 Save as Draft
@@ -565,7 +683,7 @@ const UploadPageContent: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading || uploadingToPinata}
+                disabled={loading || uploadingToPinata || processingPayment || connectingWallet}
                 className="flex-1 bg-gradient-to-r from-blue-600 cursor-pointer to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none disabled:hover:shadow-lg flex items-center justify-center space-x-2"
               >
                 {loading || uploadingToPinata ? (
@@ -575,10 +693,15 @@ const UploadPageContent: React.FC = () => {
                       {uploadingToPinata ? 'Uploading to IPFS...' : 'Issuing Certificate...'}
                     </span>
                   </>
-                ) : (
+                ) : isPremium ? (
                   <>
                     <Upload className="w-5 h-5" />
                     <span>Issue Certificate</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5" />
+                    <span>Pay ₹250 & Upload</span>
                   </>
                 )}
               </button>
@@ -616,10 +739,6 @@ const UploadPageContent: React.FC = () => {
     </div>
   );
 };
-
-
-
-
 
 export default function UploadCertificate() {
   return (
