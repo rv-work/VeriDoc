@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const fetchLoggedInStatus = async () => {
       console.log("called.....123")
       try {
-        const response = await fetch('http://localhost:5000/api/auth/check', {
+        const response = await fetch('https://veridoc.onrender.com/api/auth/check', {
           method: 'GET',
           credentials: 'include',
         });

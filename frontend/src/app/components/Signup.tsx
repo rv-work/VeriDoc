@@ -42,7 +42,7 @@ interface SubmitData {
 
 const Signup: React.FC<SignupProps> = ({ onClose }) => {
 
-  const {setIsLoggedIn  , setUserRole} = useAuth()
+  const { setIsLoggedIn, setUserRole } = useAuth()
   const [formData, setFormData] = useState<SignupFormData>({
     name: '',
     email: '',
@@ -65,7 +65,7 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
       ...prev,
       [name]: value
     }));
-    
+
     if (errors[name as keyof FormErrors]) {
       setErrors(prev => ({
         ...prev,
@@ -122,13 +122,13 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       const submitData: SubmitData = {
@@ -142,28 +142,28 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
       };
 
       console.log('Signup data:', submitData);
-      
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+
+      const response = await fetch('https://veridoc.onrender.com/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(submitData),
-        credentials : 'include'
+        credentials: 'include'
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to create account');
       }
-      
+
       const result = await response.json();
 
-      setIsLoggedIn(true) ;
-      setUserRole(result.userRole)     
-      
+      setIsLoggedIn(true);
+      setUserRole(result.userRole)
+
       toast.success("Account Created Successfully")
       onClose();
-      
+
     } catch (error) {
       console.error('Signup error:', error);
       alert('Failed to create account. Please try again.');
@@ -215,9 +215,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.name ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="Enter your full name"
               autoComplete="name"
             />
@@ -238,9 +237,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-4 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-4 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="Enter your email address"
               autoComplete="email"
             />
@@ -261,9 +259,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-12 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.password ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-12 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="Create a strong password"
               autoComplete="new-password"
             />
@@ -291,9 +288,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-12 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-12 py-3  text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="Confirm your password"
               autoComplete="new-password"
             />
@@ -320,9 +316,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               name="dob"
               value={formData.dob}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.dob ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.dob ? 'border-red-500' : 'border-gray-300'
+                }`}
               max={new Date().toISOString().split('T')[0]}
             />
           </div>
@@ -385,7 +380,7 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
         {/* Wallet Address Field (Optional) */}
         <div>
           <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-700 mb-2">
-            Wallet Address 
+            Wallet Address
           </label>
           <div className="relative">
             <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -396,9 +391,8 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               required={true}
               value={formData.walletAddress}
               onChange={handleInputChange}
-              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                errors.walletAddress ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`w-full pl-10 pr-4 py-3 text-black border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.walletAddress ? 'border-red-500' : 'border-gray-300'
+                }`}
               placeholder="0x..."
             />
           </div>
@@ -410,11 +404,10 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
         <button
           type="submit"
           disabled={isLoading}
-          className={`w-full  py-3 px-4 cursor-pointer rounded-xl font-semibold text-white transition-all duration-200 ${
-            isLoading
+          className={`w-full  py-3 px-4 cursor-pointer rounded-xl font-semibold text-white transition-all duration-200 ${isLoading
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl'
-          }`}
+            }`}
         >
           {isLoading ? (
             <div className="flex items-center justify-center space-x-2">
@@ -433,7 +426,7 @@ const Signup: React.FC<SignupProps> = ({ onClose }) => {
               type="button"
               onClick={() => {
                 onClose();
-                
+
               }}
               className="text-blue-600 cursor-pointer hover:text-blue-700 font-semibold"
             >

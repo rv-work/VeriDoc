@@ -45,7 +45,7 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
       const msg = "Please sign this message to verify ownership of your wallet.";
       const signature = await signerInstance.signMessage(msg);
 
-      const res = await fetch('http://localhost:5000/api/auth/metamask', {
+      const res = await fetch('https://veridoc.onrender.com/api/auth/metamask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -204,7 +204,7 @@ export const useWeb3 = (): Web3ContextType => {
 //         const msg = "Please sign this message to verify ownership of your wallet.";
 //         const signature = await signer.signMessage(msg);
 
-//         const res = await fetch('http://localhost:5000/api/auth/metamask', {
+//         const res = await fetch('https://veridoc.onrender.com/api/auth/metamask', {
 //           method: 'POST',
 //           headers: { 'Content-Type': 'application/json' },
 //           credentials: 'include',
@@ -355,7 +355,7 @@ export const useWeb3 = (): Web3ContextType => {
 //         const msg = "Please sign this message to verify ownership of your wallet.";
 //         const signature = await signer.signMessage(msg);
 
-//         const res = await fetch('http://localhost:5000/api/auth/metamask', {
+//         const res = await fetch('https://veridoc.onrender.com/api/auth/metamask', {
 //           method: 'POST',
 //           headers: { 'Content-Type': 'application/json' },
 //           credentials: 'include',

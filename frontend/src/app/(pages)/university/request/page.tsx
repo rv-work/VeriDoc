@@ -1,16 +1,16 @@
 'use client';
 
-import React, {useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { 
-  University, 
-  Mail, 
-  Globe, 
-  FileText, 
-  User, 
-  Briefcase, 
-  Phone, 
+import {
+  University,
+  Mail,
+  Globe,
+  FileText,
+  User,
+  Briefcase,
+  Phone,
   Wallet,
   Send,
   CheckCircle,
@@ -33,9 +33,9 @@ interface FormData {
 }
 
 const Request = () => {
-  
-  const [isDone , setIdDone] = useState("");
-  const [checkEmail , setCheckEmail] = useState<string>("")
+
+  const [isDone, setIdDone] = useState("");
+  const [checkEmail, setCheckEmail] = useState<string>("")
 
 
   const [form, setForm] = useState<FormData>({
@@ -56,21 +56,22 @@ const Request = () => {
 
 
 
-    const checkStatus = async () => {
-      const res = await axios.post("http://localhost:5000/api/university/status" , {
-        walletAddress : checkEmail } , {withCredentials : true})
-        console.log(res.data.success)
-        
-      if(res.data.success) {
-         setIdDone(res.data.status)
-      } else {
-        toast.error(res.data.msg)
-      }
+  const checkStatus = async () => {
+    const res = await axios.post("https://veridoc.onrender.com/api/university/status", {
+      walletAddress: checkEmail
+    }, { withCredentials: true })
+    console.log(res.data.success)
+
+    if (res.data.success) {
+      setIdDone(res.data.status)
+    } else {
+      toast.error(res.data.msg)
     }
-    
+  }
 
 
-  
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -81,13 +82,13 @@ const Request = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      const res = await axios.post('http://localhost:5000/api/university/request', form,
-        {withCredentials : true}
+      const res = await axios.post('https://veridoc.onrender.com/api/university/request', form,
+        { withCredentials: true }
       );
 
-       if(res.data.success === false ){
+      if (res.data.success === false) {
         toast.error(res.data.msg);
         return
       }
@@ -97,7 +98,7 @@ const Request = () => {
       setSubmitted(true);
 
       console.log(res.data)
-      
+
       setTimeout(() => {
         setForm({
           universityName: '',
@@ -112,7 +113,7 @@ const Request = () => {
         });
         setSubmitted(false);
       }, 3000);
-      
+
     } catch (err) {
       toast.error('Failed to submit request. Please try again.');
       console.error(err);
@@ -152,8 +153,8 @@ const Request = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
-      
- 
+
+
 
       <div className="max-w-4xl mx-auto">
         {/* Header Section */}
@@ -345,7 +346,7 @@ const Request = () => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Ethereum Wallet Address 
+                  Ethereum Wallet Address
                   <span className="text-gray-500 text-xs ml-2">(Mandatory*** )</span>
                 </label>
                 <div className="relative">
@@ -392,11 +393,10 @@ const Request = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 flex cursor-pointer items-center justify-center space-x-3 px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl ${
-                  loading 
-                    ? 'bg-gray-400 cursor-not-allowed' 
+                className={`flex-1 flex cursor-pointer items-center justify-center space-x-3 px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 transform hover:-translate-y-0.5 shadow-lg hover:shadow-xl ${loading
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
-                }`}
+                  }`}
               >
                 {loading ? (
                   <>
@@ -412,34 +412,34 @@ const Request = () => {
               </button>
 
 
-            
+
             </div>
 
             <p className="text-center text-sm text-gray-600 pt-4">
               By submitting this form, you agree to our terms of service and verify that all information provided is accurate.
             </p>
 
-            
+
           </form>
-      <div className="space-y-4 p-8 mb-4  border rounded-lg shadow-sm bg-white w-full max-w-md mx-auto">
-        <input
-          type="text"
-          onChange={(e) => setCheckEmail(e.target.value)}
-          placeholder="Enter your address"
-          className="w-full px-4 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-    
-        <button
-          onClick={checkStatus}
-          className="w-full bg-blue-600 cursor-pointer text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300"
-        >
-          Check Status
-        </button>
-    
-        <div className="text-sm text-gray-800 text-center">
-         {isDone.length !==  0 && <span className="font-semibold text-black">Status: {isDone ? "Approved" : "Pending" }</span>  } 
-        </div>
-      </div>
+          <div className="space-y-4 p-8 mb-4  border rounded-lg shadow-sm bg-white w-full max-w-md mx-auto">
+            <input
+              type="text"
+              onChange={(e) => setCheckEmail(e.target.value)}
+              placeholder="Enter your address"
+              className="w-full px-4 py-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+            <button
+              onClick={checkStatus}
+              className="w-full bg-blue-600 cursor-pointer text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300"
+            >
+              Check Status
+            </button>
+
+            <div className="text-sm text-gray-800 text-center">
+              {isDone.length !== 0 && <span className="font-semibold text-black">Status: {isDone ? "Approved" : "Pending"}</span>}
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -88,7 +88,7 @@ const InstitutesDashboard: React.FC = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/university/details", { credentials: "include" });
+      const response = await fetch("https://veridoc.onrender.com/api/university/details", { credentials: "include" });
       const data = await response.json();
       setUser(data.user);
       setUniversities(data.universities);

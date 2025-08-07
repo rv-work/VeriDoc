@@ -19,7 +19,7 @@ app.use(cookieParser());
 
 
 app.use(cors({
-  origin: 'http://localhost:3000', 
+  origin: ['http://localhost:3000' , "https://veridoc-phi.vercel.app/" ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'], 
   credentials: true
 }));
@@ -39,5 +39,5 @@ app.get("/" , (req , res) => {
 })
 
 app.listen(5000 , () => {
-  console.log(`Server is ruunning successfully at  : http://localhost:5000`)
+  console.log(`Server is ruunning successfully at  : https://veridoc.onrender.com`)
 })

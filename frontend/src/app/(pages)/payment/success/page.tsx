@@ -36,7 +36,7 @@ const SuccessClient = () => {
       }
 
       try {
-        const res = await fetch('http://localhost:5000/api/payment/confirm-payment', {
+        const res = await fetch('https://veridoc.onrender.com/api/payment/confirm-payment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

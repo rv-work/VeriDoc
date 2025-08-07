@@ -65,7 +65,7 @@ const Navbar = () => {
   const handleLogout = async () => {
     console.log("inside handleLogout")
     try {
-      const response = await fetch('http://localhost:5000/api/auth/logout', {
+      const response = await fetch('https://veridoc.onrender.com/api/auth/logout', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

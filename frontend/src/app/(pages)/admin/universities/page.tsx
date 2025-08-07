@@ -61,7 +61,7 @@ const AdminRequestsPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/admin/all-universities', {
+      const response = await fetch('https://veridoc.onrender.com/api/admin/all-universities', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
@@ -96,7 +96,7 @@ const AdminRequestsPage = () => {
 
       setApproving(universityId);
 
-      const response = await fetch('http://localhost:5000/api/admin/remove', {
+      const response = await fetch('https://veridoc.onrender.com/api/admin/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

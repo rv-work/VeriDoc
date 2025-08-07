@@ -222,7 +222,7 @@ const CertificateVerification: React.FC = () => {
 
   const handleView = async (add: string, hash: string) => {
     try {
-      const res = await axios.post("http://localhost:5000/api/student/view",
+      const res = await axios.post("https://veridoc.onrender.com/api/student/view",
         { add }, { withCredentials: true });
       setIssuedBy(res.data.university);
       setHash(hash);
@@ -239,7 +239,7 @@ const CertificateVerification: React.FC = () => {
     try {
       setProcessingPayment(true);
 
-      const response = await fetch('http://localhost:5000/api/payment/create-order', {
+      const response = await fetch('https://veridoc.onrender.com/api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -282,7 +282,7 @@ const CertificateVerification: React.FC = () => {
       setPaymentProcessed(true);
 
       try {
-        const response = await fetch('http://localhost:5000/api/payment/verify-session', {
+        const response = await fetch('https://veridoc.onrender.com/api/payment/verify-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

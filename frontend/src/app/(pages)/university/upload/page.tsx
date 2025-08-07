@@ -136,7 +136,7 @@ const UploadPageContent: React.FC = () => {
       setPaymentProcessed(true); // Prevent multiple processing
 
       try {
-        const response = await fetch('http://localhost:5000/api/payment/verify-session', {
+        const response = await fetch('https://veridoc.onrender.com/api/payment/verify-session', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -265,7 +265,7 @@ const UploadPageContent: React.FC = () => {
     try {
       setProcessingPayment(true);
 
-      const response = await fetch('http://localhost:5000/api/payment/create-order', {
+      const response = await fetch('https://veridoc.onrender.com/api/payment/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

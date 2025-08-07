@@ -61,7 +61,7 @@ const AdminRequestsPage = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/admin/pending', {
+      const response = await fetch('https://veridoc.onrender.com/api/admin/pending', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
@@ -94,7 +94,7 @@ const AdminRequestsPage = () => {
       toast.success("university added to blockchain ")
 
       setApproving(universityId);
-      const response = await fetch('http://localhost:5000/api/admin/accept', {
+      const response = await fetch('https://veridoc.onrender.com/api/admin/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -330,8 +330,8 @@ const AdminRequestsPage = () => {
                         onClick={() => handleApprove(request.id, request.walletAddress)}
                         disabled={approving === request.id}
                         className={`flex items-center cursor-pointer space-x-2 px-6 py-2 rounded-xl font-semibold transition-all duration-200 ${approving === request.id
-                            ? 'bg-gray-400 text-white cursor-not-allowed'
-                            : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                          ? 'bg-gray-400 text-white cursor-not-allowed'
+                          : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                           }`}
                       >
                         {approving === request.id ? (
@@ -466,8 +466,8 @@ const AdminRequestsPage = () => {
                     onClick={() => handleApprove(selectedRequest.id, selectedRequest.walletAddress)}
                     disabled={approving === selectedRequest.id}
                     className={`flex-1 px-4 py-3 rounded-xl cursor-pointer font-semibold transition-all duration-200 ${approving === selectedRequest.id
-                        ? 'bg-gray-400 text-white cursor-not-allowed'
-                        : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
                       }`}
                   >
                     {approving === selectedRequest.id ? (

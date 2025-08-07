@@ -53,7 +53,7 @@ interface Feature {
 const handleStripePayment = async (planName: string, amount: number): Promise<void> => {
   const stripe = await loadStripe("pk_test_51QEn8vD5MY0XuWE68E1BY1X1EiSaEAVROhJF5OoIbDV9f8S4b9NJ9RJMVXC2W0dYnu598qpKIq7H4ustwfls8zdc003AEUjMiJ")
 
-  const response = await fetch('http://localhost:5000/api/payment/create-order', {
+  const response = await fetch('https://veridoc.onrender.com/api/payment/create-order', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
