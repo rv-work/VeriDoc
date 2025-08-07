@@ -36,7 +36,6 @@ export const CreateOrder = async (req, res) => {
 
     res.json({ id: session.id });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
     res.status(500).json({ error: 'Failed to create checkout session' });
   }
 }
@@ -74,7 +73,6 @@ export const VerifySession = async (req, res) => {
     
 
   } catch (error) {
-    console.error('Error verifying payment session:', error);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to verify payment session' 
@@ -93,9 +91,6 @@ export const ConfirmPayment = async (req, res) => {
 
 
   if (session.payment_status === 'paid') {
-
-    console.log("Confirmed payment for session", session.id);
-    console.log("plan name : " , planName)
 
     if (planName === "basic") {
       await prisma.user.update({
@@ -125,7 +120,6 @@ export const ConfirmPayment = async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
-   console.log("user after cnf : " , user)
 
     return res.status(200).json({ success: true });
   } else {

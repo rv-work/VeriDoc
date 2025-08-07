@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  University, 
-  Building2, 
-  Mail, 
-  Phone, 
-  Globe, 
-  FileText, 
-  User, 
-  Briefcase, 
-  CheckCircle, 
-  Clock, 
+import {
+  University,
+  Building2,
+  Mail,
+  Phone,
+  Globe,
+  FileText,
+  User,
+  Briefcase,
+  CheckCircle,
+  Clock,
   Eye,
   Filter,
   Search,
@@ -24,7 +24,7 @@ import { useWeb3 } from '@/app/context/Web3Context';
 
 enum UniversityType {
   government = 'government',
-  private = 'private', 
+  private = 'private',
   deemed = 'deemed',
   autonomous = 'autonomous',
   central = 'central',
@@ -56,7 +56,7 @@ const AdminRequestsPage = () => {
   const [selectedRequest, setSelectedRequest] = useState<UniversityRequest | null>(null);
 
 
-  const {contractInstance , address} = useWeb3();
+  const { contractInstance, address } = useWeb3();
 
   const fetchRequests = async () => {
     try {
@@ -69,7 +69,6 @@ const AdminRequestsPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("data: " , data)
         setRequests(data.universities);
       } else {
         toast.error('Failed to fetch requests');
@@ -82,15 +81,15 @@ const AdminRequestsPage = () => {
     }
   };
 
-  const handleApprove = async (universityId: string , universityWallet : string) => {
+  const handleApprove = async (universityId: string, universityWallet: string) => {
     try {
-      
-      if(!address){
-          toast.error("Login with metamask")
+
+      if (!address) {
+        toast.error("Login with metamask")
       }
 
       const tx = await contractInstance?.addUniversity(universityWallet);
-      await tx.wait(); 
+      await tx.wait();
       console.log("University added to smart contract:", tx.hash);
       toast.success("university added to blockchain ")
 
@@ -124,11 +123,11 @@ const AdminRequestsPage = () => {
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = request.universityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      request.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.email.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesType = filterType === 'all' || request.type === filterType;
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -201,7 +200,7 @@ const AdminRequestsPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white/95 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 p-6">
               <div className="flex items-center space-x-3">
                 <University className="w-8 h-8 text-blue-500" />
@@ -236,7 +235,7 @@ const AdminRequestsPage = () => {
                   className="w-full text-black pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 />
               </div>
-              
+
               <div className="relative">
                 <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <select
@@ -264,8 +263,8 @@ const AdminRequestsPage = () => {
             <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-800 mb-2">No Pending Requests</h3>
             <p className="text-gray-600">
-              {searchTerm || filterType !== 'all' 
-                ? 'No requests match your current filters.' 
+              {searchTerm || filterType !== 'all'
+                ? 'No requests match your current filters.'
                 : 'All university requests have been processed.'}
             </p>
           </div>
@@ -284,7 +283,7 @@ const AdminRequestsPage = () => {
                         <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-3 flex-shrink-0">
                           <University className="w-8 h-8 text-blue-600" />
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="text-xl font-bold text-gray-800 truncate">
@@ -294,7 +293,7 @@ const AdminRequestsPage = () => {
                               {getTypeIcon(request.type)} {request.type.charAt(0).toUpperCase() + request.type.slice(1)}
                             </span>
                           </div>
-                          
+
                           <div className="grid md:grid-cols-2 gap-3 text-sm text-gray-600">
                             <div className="flex items-center space-x-2">
                               <User className="w-4 h-4" />
@@ -326,15 +325,14 @@ const AdminRequestsPage = () => {
                         <Eye className="w-4 h-4" />
                         <span>View Details</span>
                       </button>
-                      
+
                       <button
-                        onClick={() => handleApprove(request.id , request.walletAddress)}
+                        onClick={() => handleApprove(request.id, request.walletAddress)}
                         disabled={approving === request.id}
-                        className={`flex items-center cursor-pointer space-x-2 px-6 py-2 rounded-xl font-semibold transition-all duration-200 ${
-                          approving === request.id
+                        className={`flex items-center cursor-pointer space-x-2 px-6 py-2 rounded-xl font-semibold transition-all duration-200 ${approving === request.id
                             ? 'bg-gray-400 text-white cursor-not-allowed'
                             : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
-                        }`}
+                          }`}
                       >
                         {approving === request.id ? (
                           <>
@@ -371,7 +369,7 @@ const AdminRequestsPage = () => {
                   </button>
                 </div>
               </div>
-              
+
               <div className="p-6 space-y-6">
                 <div className="text-center">
                   <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl p-4 w-20 h-20 mx-auto mb-4">
@@ -386,19 +384,19 @@ const AdminRequestsPage = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800 border-b pb-2">Institution Information</h4>
-                    
+
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <Globe className="w-5 h-5 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-600">Website</p>
-                          <Link href={selectedRequest.website} target="_blank" rel="noopener noreferrer" 
-                             className="text-blue-600 hover:underline break-all">
+                          <Link href={selectedRequest.website} target="_blank" rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline break-all">
                             {selectedRequest.website}
                           </Link>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <FileText className="w-5 h-5 text-gray-400" />
                         <div>
@@ -411,7 +409,7 @@ const AdminRequestsPage = () => {
 
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800 border-b pb-2">Contact Information</h4>
-                    
+
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3">
                         <User className="w-5 h-5 text-gray-400" />
@@ -420,7 +418,7 @@ const AdminRequestsPage = () => {
                           <p className="font-medium text-gray-400">{selectedRequest.contactPerson}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <Briefcase className="w-5 h-5 text-gray-400" />
                         <div>
@@ -428,7 +426,7 @@ const AdminRequestsPage = () => {
                           <p className="font-medium text-gray-400">{selectedRequest.designation}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <Mail className="w-5 h-5 text-gray-400" />
                         <div>
@@ -436,7 +434,7 @@ const AdminRequestsPage = () => {
                           <p className="font-medium text-gray-400">{selectedRequest.email}</p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-3">
                         <Phone className="w-5 h-5 text-gray-400" />
                         <div>
@@ -465,13 +463,12 @@ const AdminRequestsPage = () => {
                     Close
                   </button>
                   <button
-                    onClick={() => handleApprove(selectedRequest.id , selectedRequest.walletAddress)}
+                    onClick={() => handleApprove(selectedRequest.id, selectedRequest.walletAddress)}
                     disabled={approving === selectedRequest.id}
-                    className={`flex-1 px-4 py-3 rounded-xl cursor-pointer font-semibold transition-all duration-200 ${
-                      approving === selectedRequest.id
+                    className={`flex-1 px-4 py-3 rounded-xl cursor-pointer font-semibold transition-all duration-200 ${approving === selectedRequest.id
                         ? 'bg-gray-400 text-white cursor-not-allowed'
                         : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white'
-                    }`}
+                      }`}
                   >
                     {approving === selectedRequest.id ? (
                       <div className="flex items-center justify-center space-x-2">

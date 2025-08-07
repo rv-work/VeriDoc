@@ -41,7 +41,6 @@ export const UniversityRequest = async (req, res) => {
 
       return res.status(201).json({ success : true, message: "University request submitted successfully.", university: newUniversity });
     } catch (error) {
-      console.error(error);
       return res.status(500).json({ message: "An error occurred while submitting the university request." });
     }
   
@@ -58,11 +57,9 @@ export const CheckStatus = async (req, res) => {
         return res.status(200).json({ success : false, msg: "University not found" });
       }
      
-      console.log("status : " , university.isApproved)
       
       return res.status(201).json({ success : true, status: university.isApproved });
     } catch (error) {
-      console.error(error);
       return res.status(500).json({ message: "An error occurred while submitting the university request." });
     }
   
@@ -84,7 +81,6 @@ export const GetDetails = async (req, res) => {
 
     return res.status(200).json({ success: true, user, universities });
   } catch (error) {
-    console.error("Error fetching universities:", error);
     return res.status(500).json({ success: false, error: "Something went wrong" });
   }
 };

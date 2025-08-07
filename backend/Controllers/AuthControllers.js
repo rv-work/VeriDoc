@@ -145,7 +145,6 @@ export const Metamask = async (req, res) => {
 
     res.json({ success: true, message: "Signature verified successfully", address: recoveredAddress });
   } catch (err) {
-    console.error("Signature verification failed", err);
     res.status(401).json({ error: "Invalid signature" });
   }
 };
