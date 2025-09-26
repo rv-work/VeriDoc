@@ -88,18 +88,31 @@ const AdminRequestsPage = () => {
         toast.error("Login with metamask")
       }
 
+
+
+
       const tx = await contractInstance?.addUniversity(universityWallet);
       await tx.wait();
+
+
+
+
+
+
       console.log("University added to smart contract:", tx.hash);
       toast.success("university added to blockchain ")
 
       setApproving(universityId);
+
+
       const response = await fetch('https://veridoc.onrender.com/api/admin/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ universityId })
       });
+
+
 
       if (response.ok) {
         toast.success('University approved successfully!');

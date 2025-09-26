@@ -62,7 +62,7 @@ const StudentDashboard: React.FC = () => {
   const [qrLink, setQrLink] = useState<string | null>(null);
 
   const handleClick = (certificateId: string, issuedBy: string) => {
-    const link = `http://localhost:3000/student/certificates/${issuedBy}/${address}/${certificateId}`;
+    const link = `https://veridoc-rvn.vercel.app/student/certificates/${issuedBy}/${address}/${certificateId}`;
     setQrLink(link);
     handleShare()
   };
@@ -473,8 +473,8 @@ const StudentDashboard: React.FC = () => {
                 <button
                   onClick={() => setViewMode('grid')}
                   className={`p-2 rounded-md transition-colors ${viewMode === 'grid'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                   aria-label="Switch to grid view"
                 >
@@ -483,8 +483,8 @@ const StudentDashboard: React.FC = () => {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded-md transition-colors ${viewMode === 'list'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
                     }`}
                   aria-label="Switch to list view"
                 >

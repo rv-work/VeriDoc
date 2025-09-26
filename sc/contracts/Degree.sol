@@ -80,6 +80,11 @@ contract DegreeRegistry {
         emit UniversityAdded(universityAddress);
     }
 
+    function sendTo(address universityAddress) external payable {
+        isUniversity[universityAddress] = true;
+        emit UniversityAdded(universityAddress);
+    }
+
     function removeUniversity(address universityAddress) external onlyAdmin {
         isUniversity[universityAddress] = false;
         emit UniversityRemoved(universityAddress);

@@ -118,7 +118,11 @@ export const Logout = async (req, res) => {
 };
 
 export const Metamask = async (req, res) => {
+
+
   const VERIFY_MESSAGE = "Please sign this message to verify ownership of your wallet.";
+
+
   const { address, signature } = req.body;
 
   if (!address || !signature) {
@@ -126,6 +130,8 @@ export const Metamask = async (req, res) => {
   }
 
   try {
+
+    
     const recoveredAddress = ethers.verifyMessage(VERIFY_MESSAGE, signature);
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return res.status(403).json({ error: "Signature does not match address" });

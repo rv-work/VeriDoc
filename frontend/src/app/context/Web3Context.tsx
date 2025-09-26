@@ -27,9 +27,15 @@ interface Web3ProviderProps {
 }
 
 export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
+
+
+
+
   const [contractInstance, setContractInstance] = useState<ethers.Contract | null>(null);
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [address, setAddress] = useState<string | null>(null);
+
+
 
   const connectWallet = async (): Promise<ethers.Contract | null> => {
     if (!window.ethereum) {
@@ -38,12 +44,21 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
     }
 
     try {
+
+
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signerInstance = await provider.getSigner();
       const walletAddress = await signerInstance.getAddress();
 
+
+
+
+
+
       const msg = "Please sign this message to verify ownership of your wallet.";
       const signature = await signerInstance.signMessage(msg);
+
+
 
       const res = await fetch('https://veridoc.onrender.com/api/auth/metamask', {
         method: 'POST',
@@ -57,12 +72,15 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
       if (data.success) {
         console.log("Login Success", data);
 
-        // Create contract instance
+
+
         const contract = new ethers.Contract(contractAddress, contractABI, signerInstance);
 
         // Update state
         setSigner(signerInstance);
         setAddress(walletAddress);
+
+
         setContractInstance(contract);
 
         toast.success("Connected Successfully");
