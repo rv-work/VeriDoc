@@ -26,7 +26,7 @@ export const Signup = async (req, res) => {
         dob,
         gender,
         role,
-        walletAddress 
+        walletAddress  : walletAddress.toLowerCase() 
       },
     });
 
@@ -139,7 +139,7 @@ export const Metamask = async (req, res) => {
     
   
     const user = await prisma.user.findUnique({
-      where: { walletAddress: recoveredAddress }, 
+      where: { walletAddress: recoveredAddress.toLowerCase() }, 
     });
 
 
