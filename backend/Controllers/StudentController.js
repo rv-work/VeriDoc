@@ -6,7 +6,14 @@ export const ViewIssuer = async (req, res) => {
       const { add } = req.body;
 
 
-      const university = await prisma.university.findUnique({ where: { walletAddress  : add} });
+      let university = await prisma.university.findUnique({ where: { walletAddress  : add } });
+
+      
+      if (!university) {
+       university = await prisma.university.findUnique({ where: { walletAddress  : add.toLowerCase() } });
+      }
+
+
       if (!university) {
         return res.status(404).json({ status: "University not found" });
       }

@@ -105,7 +105,7 @@ const InstitutesDashboard: React.FC = () => {
 
   const fetchCertificates = async (universityWallteAddress: string) => {
 
-    if (universityWallteAddress !== address) {
+    if (universityWallteAddress.toLowerCase() !== address?.toLowerCase()) {
       toast.error("Connect To Correct Wallte Account")
       return
     }

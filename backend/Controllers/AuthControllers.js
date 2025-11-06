@@ -130,17 +130,26 @@ export const Metamask = async (req, res) => {
   }
 
   try {
-
+    
+    console.log("aaya ad :  " , address)
     
     const recoveredAddress = ethers.verifyMessage(VERIFY_MESSAGE, signature);
     if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
       return res.status(403).json({ error: "Signature does not match address" });
     }
+
+     console.log("aaya ad :  " , address , " rec : " , recoveredAddress)
     
   
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { walletAddress: recoveredAddress.toLowerCase() }, 
     });
+
+    if(!user){
+      user = await prisma.user.findUnique({
+      where: { walletAddress: recoveredAddress }, 
+    });
+    }
 
 
 

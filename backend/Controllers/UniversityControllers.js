@@ -28,7 +28,7 @@ export const UniversityRequest = async (req, res) => {
           designation,
           phone,
           email,
-          walletAddress,
+          walletAddress : walletAddress.toLowerCase() ,
           isApproved: false,
           addedBy: {
             connect: {
