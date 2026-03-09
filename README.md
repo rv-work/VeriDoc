@@ -4,7 +4,7 @@ A powerful Web3 platform to **issue, verify, and manage certificates and degrees
 
 ---
 
-## 🚀 Why CertiChain?
+## 🚀 Why CertiChain..?
 
 Traditional certificate verification is slow, manual, and prone to forgery.  
 **CertiChain** leverages the power of **Ethereum, IPFS, and wallet-based identity** to ensure every degree or certificate is:
